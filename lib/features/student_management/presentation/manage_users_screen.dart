@@ -1,0 +1,617 @@
+import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
+
+class ManageUsersScreen extends StatefulWidget {
+  const ManageUsersScreen({super.key});
+
+  @override
+  State<ManageUsersScreen> createState() => _ManageUsersScreenState();
+}
+
+class _ManageUsersScreenState extends State<ManageUsersScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  // Mock Data
+  final List<Map<String, dynamic>> _students = [
+    {
+      "id": "s1",
+      "name": "Ahmad Muhammad",
+      "teacher": "Qari Sulaiman",
+      "parent": "Muhammad Bilal",
+    },
+    {
+      "id": "s2",
+      "name": "Hamza Yousaf",
+      "teacher": "Unassigned",
+      "parent": "Unassigned",
+    },
+  ];
+
+  final List<String> _teachers = ["Qari Sulaiman", "Qari Tariq", "Hafiz Bilal"];
+  final List<String> _parents = [
+    "Muhammad Bilal",
+    "Yasir Khan",
+    "Tariq Mahmood",
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: Text("manage_users".tr()),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1E293B),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: const Color(0xFF0A5C36),
+          unselectedLabelColor: const Color(0xFF64748B),
+          indicatorColor: const Color(0xFF0A5C36),
+          indicatorWeight: 3,
+          tabs: [
+            Tab(text: "students".tr()),
+            Tab(text: "teachers".tr()),
+            Tab(text: "parents".tr()),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildStudentsTab(),
+          _buildGenericUserTab(_teachers, "teacher"),
+          _buildGenericUserTab(_parents, "parent"),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0A5C36),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 54),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            onPressed: () => _showAddUserBottomSheet(),
+            icon: const Icon(Icons.person_add_alt_1_rounded),
+            label: Text(
+              "add_new_user".tr(),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- Students Management List ---
+  Widget _buildStudentsTab() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      physics: const BouncingScrollPhysics(),
+      itemCount: _students.length,
+      itemBuilder: (context, index) {
+        final student = _students[index];
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.grey.withOpacity(0.15)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      student['name'],
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.swap_horizontal_circle_outlined,
+                        color: Color(0xFF0A5C36),
+                      ),
+                      onPressed: () =>
+                          _showAssignRelationsSheet(student, index),
+                      tooltip: "Assign Relationships",
+                    ),
+                  ],
+                ),
+                const Divider(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildRelationIndicator(
+                        icon: Icons.badge_outlined,
+                        roleLabel: "teacher".tr(),
+                        assignedName: student['teacher'],
+                        color: Colors.teal,
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildRelationIndicator(
+                        icon: Icons.family_restroom_rounded,
+                        roleLabel: "parent".tr(),
+                        assignedName: student['parent'],
+                        color: Colors.pink,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRelationIndicator({
+    required IconData icon,
+    required String roleLabel,
+    required String assignedName,
+    required Color color,
+  }) {
+    final isUnassigned = assignedName == "Unassigned";
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: isUnassigned ? Colors.grey : color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                roleLabel,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Color(0xFF94A3B8),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                assignedName,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isUnassigned
+                      ? Colors.red[300]
+                      : const Color(0xFF475569),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- Teachers & Parents Simple Lists ---
+  Widget _buildGenericUserTab(List<String> userList, String role) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      physics: const BouncingScrollPhysics(),
+      itemCount: userList.length,
+      itemBuilder: (context, index) {
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.grey.withOpacity(0.15)),
+          ),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: role == "teacher"
+                  ? Colors.teal.withOpacity(0.12)
+                  : Colors.pink.withOpacity(0.12),
+              child: Icon(
+                role == "teacher"
+                    ? Icons.badge_outlined
+                    : Icons.family_restroom_rounded,
+                color: role == "teacher" ? Colors.teal : Colors.pink,
+              ),
+            ),
+            title: Text(
+              userList[index],
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            trailing: IconButton(
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.redAccent,
+              ),
+              onPressed: () {
+                setState(() {
+                  userList.removeAt(index);
+                });
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // --- Bottom Sheets ---
+
+  // Sheet 1: Assign Student to Teacher/Parent
+  void _showAssignRelationsSheet(Map<String, dynamic> student, int index) {
+    String? currentTeacher = student['teacher'] == "Unassigned"
+        ? _teachers.first
+        : student['teacher'];
+    String? currentParent = student['parent'] == "Unassigned"
+        ? _parents.first
+        : student['parent'];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "assign_relationships_for".tr(args: [student['name']]),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Teacher Dropdown
+                  Text(
+                    "assign_teacher".tr(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: currentTeacher,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: _teachers
+                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                        .toList(),
+                    onChanged: (val) =>
+                        setSheetState(() => currentTeacher = val),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Parent Dropdown
+                  Text(
+                    "assign_parent".tr(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: currentParent,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: _parents
+                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        .toList(),
+                    onChanged: (val) =>
+                        setSheetState(() => currentParent = val),
+                  ),
+                  const SizedBox(height: 32),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0A5C36),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _students[index]['teacher'] = currentTeacher;
+                          _students[index]['parent'] = currentParent;
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        "save_assignments".tr(),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Sheet 2: Create a New User
+  // Sheet 2: Create a New User (With Comprehensive Registration Forms)
+  void _showAddUserBottomSheet() {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final passwordController = TextEditingController();
+    String selectedRole = "Student";
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 24,
+                right: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "add_new_user".tr(),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // --- Role Segment Selection ---
+                      Text(
+                        "user_role".tr(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<String>(
+                          segments: [
+                            ButtonSegment(
+                              value: 'Student',
+                              label: Text('student'.tr()),
+                            ),
+                            ButtonSegment(
+                              value: 'Teacher',
+                              label: Text('teacher'.tr()),
+                            ),
+                            ButtonSegment(
+                              value: 'Parent',
+                              label: Text('parent'.tr()),
+                            ),
+                          ],
+                          selected: {selectedRole},
+                          onSelectionChanged: (set) =>
+                              setSheetState(() => selectedRole = set.first),
+                          style: SegmentedButton.styleFrom(
+                            selectedBackgroundColor: const Color(
+                              0xFF0A5C36,
+                            ).withAlpha(38),
+                            selectedForegroundColor: const Color(0xFF0A5C36),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- Full Name Field (All Roles) ---
+                      Text(
+                        "full_name".tr(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: nameController,
+                        decoration: InputDecoration(
+                          hintText: "Enter full name...",
+                          prefixIcon: const Icon(Icons.person_outline),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return "field_required".tr();
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // --- Dynamic Form Fields for Logins (Teachers & Parents Only) ---
+                      if (selectedRole != 'Student') ...[
+                        // Phone Number (Acts as username/login identifier)
+                        const Text(
+                          "Phone Number",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: phoneController,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            hintText: "e.g., 03001234567",
+                            prefixIcon: const Icon(Icons.phone_outlined),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "field_required".tr();
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Login Password
+                        const Text(
+                          "Login Password",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: passwordController,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            hintText: "••••••••",
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "field_required".tr();
+                            }
+                            if (value.length < 6) {
+                              return "Password must be at least 6 characters";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      const SizedBox(height: 16),
+
+                      // --- Submit Button ---
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0A5C36),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () {
+                            if (formKey.currentState!.validate()) {
+                              final name = nameController.text.trim();
+                              final phone = phoneController.text.trim();
+                              final password = passwordController.text;
+
+                              // TODO: [DATABASE CALLS FOR REGISTRATION]
+                              // If Teacher/Parent: Create user credentials in your auth system
+                              // If Student: Write student metadata linked to DB
+                              // e.g., await apiService.registerUser(name, selectedRole, phone, password);
+
+                              setState(() {
+                                if (selectedRole == 'Student') {
+                                  _students.add({
+                                    "id": DateTime.now().millisecondsSinceEpoch
+                                        .toString(),
+                                    "name": name,
+                                    "teacher": "Unassigned",
+                                    "parent": "Unassigned",
+                                  });
+                                } else if (selectedRole == 'Teacher') {
+                                  _teachers.add(name);
+                                  // Optionally update your local mock auth list to allow logging in
+                                } else {
+                                  _parents.add(name);
+                                }
+                              });
+
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    "$selectedRole Registered Successfully!",
+                                  ),
+                                  backgroundColor: const Color(0xFF0A5C36),
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(
+                            "create_user".tr(),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
