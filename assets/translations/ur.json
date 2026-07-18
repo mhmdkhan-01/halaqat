@@ -91,5 +91,22 @@
   "field_required": "یہ خانہ پُر کرنا لازمی ہے",
   "login": "سائن ان کریں",
   "testing_hint": "ٹیسٹنگ کے لیے خودکار لاگ ان طریقے",
-  "invalid_credentials_error": "غلط صارف نام یا پاس ورڈ۔ ٹیسٹ کرنے کے لیے آسان لاگ ان بٹن استعمال کریں۔"
+  "invalid_credentials_error": "غلط صارف نام یا پاس ورڈ۔ ٹیسٹ کرنے کے لیے آسان لاگ ان بٹن استعمال کریں۔",
+  "parent_guardian": "والد / سرپرست",
+  "hifz_completion_progress": "حفظ کی مجموعی پیشرفت",
+  "learning_history_logs": "روزانہ تعلیمی لاگز کی تاریخ",
+  "today_sheet": "آج کی شیٹ",
+  "directory": "ڈائریکٹری",
+  "settings": "سیٹنگز",
+  "Session 1 (Sabaq)": "سیشن 1 (سبق)",
+  "Session 2 (Sabqi)": "سیشن 2 (سبقی)",
+  "Session 3 (Manzil)": "سیشن 3 (منزل)",
+  "overview": "جائزہ",
+  "users": "صارفین",
+  "academic": "تعلیمی",
+  "logout": "لاگ آؤٹ",
+  "admin_panel": "ایڈمن پینل",
+  "welcome_boss": "خوش آمدید، ایڈمن",
+  "quick_actions": "فوری اقدامات",
+  "academic_setup": "تعلیمی سیٹ اپ"
 }

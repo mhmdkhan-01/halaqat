@@ -56,7 +56,6 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      // Temporarily loading our entry screen for a student named "Hussein"
       home: const SplashScreen(),
     );
   }

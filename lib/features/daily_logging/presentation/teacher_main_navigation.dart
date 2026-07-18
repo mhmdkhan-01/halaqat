@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
+import 'package:halaqat/features/daily_logging/presentation/student_history_screen.dart';
 import 'teacher_dashboard.dart'; // Imports Tab 1
 
 class TeacherMainNavigation extends StatefulWidget {
@@ -165,7 +166,19 @@ class StudentDirectoryTab extends StatelessWidget {
                 color: Color(0xFF94A3B8),
               ),
               onTap: () {
-                // Future Student History view
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => StudentHistoryScreen(
+                      student: {
+                        'name': 'Hussein Muhammad',
+                        'para': 1,
+                        'parentPhone': '03420530847',
+                        'parent': 'Ahmed Muhammad',
+                      },
+                    ), // Pass student data
+                  ),
+                );
               },
             ),
           );

@@ -91,5 +91,22 @@
   "field_required": "This field is required",
   "login": "Sign In",
   "testing_hint": "QUICK TEST AUTO-FILL OPTIONS",
-  "invalid_credentials_error": "Invalid username or password. Use quick login options to test."
+  "invalid_credentials_error": "Invalid username or password. Use quick login options to test.",
+  "parent_guardian": "PARENT / GUARDIAN",
+  "hifz_completion_progress": "Hifz Completion Progress",
+  "learning_history_logs": "Learning History Logs",
+  "today_sheet": "Today's Sheet",
+  "directory": "Directory",
+  "settings": "Settings",
+  "Session 1 (Sabaq)": "Session 1 (Sabaq)",
+  "Session 2 (Sabqi)": "Session 2 (Sabqi)",
+  "Session 3 (Manzil)": "Session 3 (Manzil)",
+  "overview": "Overview",
+  "users": "Users",
+  "academic": "Academic",
+  "logout": "Logout",
+  "admin_panel": "Admin Panel",
+  "welcome_boss": "Welcome, Admin",
+  "quick_actions": "Quick Actions",
+  "academic_setup": "Academic Setup"
 }
