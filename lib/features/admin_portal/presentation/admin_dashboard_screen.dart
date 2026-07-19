@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 import 'package:halaqat/features/progress_tracking/presentation/publish_results_screen.dart';
 
 // Imports for your screens
@@ -17,7 +18,6 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _currentTab = 0;
-
   // The main sub-screens the Admin can switch between via Bottom Navigation
   final List<Widget> _screens = [
     const AdminHomeTab(),
@@ -103,6 +103,7 @@ class AdminHomeTab extends StatelessWidget {
                       ),
                     ],
                   ),
+                  //replacing CircleAvatar with language switcher
                   const CircleAvatar(
                     backgroundColor: Color(0xFF0A5C36),
                     radius: 22,
@@ -129,25 +130,25 @@ class AdminHomeTab extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildSummaryCard(
                   "Total Students",
-                  "124",
+                  "${AppData.getTotalStudentsCount()}",
                   const Color(0xFF0A5C36),
                   Icons.school,
                 ),
                 _buildSummaryCard(
                   "Total Teachers",
-                  "8",
+                  "${AppData.getTotalTeachersCount()}",
                   Colors.blue,
                   Icons.person_pin_rounded,
                 ),
                 _buildSummaryCard(
                   "Total Presents",
-                  "3",
+                  "${AppData.gettotalAttendanceCount('2026-07-16', 'present')}",
                   Colors.orange,
                   Icons.check_circle,
                 ),
                 _buildSummaryCard(
                   "Total Absents",
-                  "1",
+                  "${AppData.gettotalAttendanceCount('2026-07-16', 'absent')}",
                   Colors.red,
                   Icons.cancel,
                 ),

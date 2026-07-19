@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 
 class ManageUsersScreen extends StatefulWidget {
   const ManageUsersScreen({super.key});
@@ -13,27 +14,24 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
   late TabController _tabController;
 
   // Mock Data
-  final List<Map<String, dynamic>> _students = [
-    {
-      "id": "s1",
-      "name": "Ahmad Muhammad",
-      "teacher": "Qari Sulaiman",
-      "parent": "Muhammad Bilal",
-    },
-    {
-      "id": "s2",
-      "name": "Hamza Yousaf",
-      "teacher": "Unassigned",
-      "parent": "Unassigned",
-    },
-  ];
+  final List<Map<String, dynamic>> _students =
+      AppData.getStudentsLegacyFormat();
 
-  final List<String> _teachers = ["Qari Sulaiman", "Qari Tariq", "Hafiz Bilal"];
-  final List<String> _parents = [
-    "Muhammad Bilal",
-    "Yasir Khan",
-    "Tariq Mahmood",
-  ];
+  // Storing entire map structure to have access to IDs
+  final Map<String, dynamic> _teachersData = AppData.getUserNamesByRole(
+    'teacher',
+  );
+  final Map<String, dynamic> _parentsData = AppData.getUserNamesByRole(
+    'parent',
+  );
+
+  List<String> get _teachersList =>
+      List<String>.from(_teachersData['name'] ?? []);
+  List<String> get _teachersIds => List<String>.from(_teachersData['id'] ?? []);
+
+  List<String> get _parentsList =>
+      List<String>.from(_parentsData['name'] ?? []);
+  List<String> get _parentsIds => List<String>.from(_parentsData['id'] ?? []);
 
   @override
   void initState() {
@@ -74,8 +72,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
         controller: _tabController,
         children: [
           _buildStudentsTab(),
-          _buildGenericUserTab(_teachers, "teacher"),
-          _buildGenericUserTab(_parents, "parent"),
+          _buildGenericUserTab(_teachersList, "teacher"),
+          _buildGenericUserTab(_parentsList, "parent"),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -126,7 +124,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      student['name'],
+                      student['name'] ?? '',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -151,7 +149,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                       child: _buildRelationIndicator(
                         icon: Icons.badge_outlined,
                         roleLabel: "teacher".tr(),
-                        assignedName: student['teacher'],
+                        assignedName: student['teacher'] ?? "Unassigned",
                         color: Colors.teal,
                       ),
                     ),
@@ -159,7 +157,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                       child: _buildRelationIndicator(
                         icon: Icons.family_restroom_rounded,
                         roleLabel: "parent".tr(),
-                        assignedName: student['parent'],
+                        assignedName: student['parent'] ?? "Unassigned",
                         color: Colors.pink,
                       ),
                     ),
@@ -252,6 +250,11 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
               onPressed: () {
                 setState(() {
                   userList.removeAt(index);
+                  if (role == "teacher") {
+                    _teachersIds.removeAt(index);
+                  } else {
+                    _parentsIds.removeAt(index);
+                  }
                 });
               },
             ),
@@ -265,11 +268,12 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
 
   // Sheet 1: Assign Student to Teacher/Parent
   void _showAssignRelationsSheet(Map<String, dynamic> student, int index) {
+    // If list is empty, default safely to "Unassigned" instead of calling .first
     String? currentTeacher = student['teacher'] == "Unassigned"
-        ? _teachers.first
+        ? (_teachersList.isEmpty ? "Unassigned" : _teachersList.first)
         : student['teacher'];
     String? currentParent = student['parent'] == "Unassigned"
-        ? _parents.first
+        ? (_parentsList.isEmpty ? "Unassigned" : _parentsList.first)
         : student['parent'];
 
     showModalBottomSheet(
@@ -287,7 +291,9 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "assign_relationships_for".tr(args: [student['name']]),
+                    "assign_relationships_for".tr(
+                      args: [student['name'] ?? ''],
+                    ),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -305,17 +311,23 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: currentTeacher,
+                    value:
+                        currentTeacher == "Unassigned" &&
+                            _teachersList.isNotEmpty
+                        ? null
+                        : currentTeacher,
+                    hint: const Text("No teachers available"),
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    items: _teachers
+                    items: _teachersList
                         .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                         .toList(),
-                    onChanged: (val) =>
-                        setSheetState(() => currentTeacher = val),
+                    onChanged: _teachersList.isEmpty
+                        ? null
+                        : (val) => setSheetState(() => currentTeacher = val),
                   ),
                   const SizedBox(height: 20),
 
@@ -329,17 +341,22 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    initialValue: currentParent,
+                    value:
+                        currentParent == "Unassigned" && _parentsList.isNotEmpty
+                        ? null
+                        : currentParent,
+                    hint: const Text("No parents available"),
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    items: _parents
+                    items: _parentsList
                         .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                         .toList(),
-                    onChanged: (val) =>
-                        setSheetState(() => currentParent = val),
+                    onChanged: _parentsList.isEmpty
+                        ? null
+                        : (val) => setSheetState(() => currentParent = val),
                   ),
                   const SizedBox(height: 32),
 
@@ -355,9 +372,35 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                         ),
                       ),
                       onPressed: () {
+                        // Extracting actual IDs matching selected user index name entries
+                        int teacherIndex = _teachersList.indexOf(
+                          currentTeacher ?? '',
+                        );
+                        int parentIndex = _parentsList.indexOf(
+                          currentParent ?? '',
+                        );
+
+                        String teacherId = teacherIndex != -1
+                            ? _teachersIds[teacherIndex]
+                            : "Unassigned";
+                        String parentId = parentIndex != -1
+                            ? _parentsIds[parentIndex]
+                            : "Unassigned";
+
                         setState(() {
-                          _students[index]['teacher'] = currentTeacher;
-                          _students[index]['parent'] = currentParent;
+                          AppData.assignRelations(
+                            currentParent ?? "Unassigned",
+                            currentTeacher ?? "Unassigned",
+                            teacherId,
+                            parentId,
+                            index,
+                          );
+                          _students[index]['parent'] =
+                              currentParent ?? "Unassigned";
+                          _students[index]['teacher'] =
+                              currentTeacher ?? "Unassigned";
+                          _students[index]['teacherId'] = teacherId;
+                          _students[index]['parentId'] = parentId;
                         });
                         Navigator.pop(context);
                       },
@@ -377,7 +420,6 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
   }
 
   // Sheet 2: Create a New User
-  // Sheet 2: Create a New User (With Comprehensive Registration Forms)
   void _showAddUserBottomSheet() {
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
@@ -485,7 +527,6 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
 
                       // --- Dynamic Form Fields for Logins (Teachers & Parents Only) ---
                       if (selectedRole != 'Student') ...[
-                        // Phone Number (Acts as username/login identifier)
                         const Text(
                           "Phone Number",
                           style: TextStyle(
@@ -513,7 +554,6 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                         ),
                         const SizedBox(height: 16),
 
-                        // Login Password
                         const Text(
                           "Login Password",
                           style: TextStyle(
@@ -562,28 +602,27 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                           onPressed: () {
                             if (formKey.currentState!.validate()) {
                               final name = nameController.text.trim();
-                              final phone = phoneController.text.trim();
-                              final password = passwordController.text;
-
-                              // TODO: [DATABASE CALLS FOR REGISTRATION]
-                              // If Teacher/Parent: Create user credentials in your auth system
-                              // If Student: Write student metadata linked to DB
-                              // e.g., await apiService.registerUser(name, selectedRole, phone, password);
+                              final generatedId = DateTime.now()
+                                  .millisecondsSinceEpoch
+                                  .toString();
 
                               setState(() {
                                 if (selectedRole == 'Student') {
+                                  AppData.addStudent(generatedId, name);
                                   _students.add({
-                                    "id": DateTime.now().millisecondsSinceEpoch
-                                        .toString(),
+                                    "id": generatedId,
                                     "name": name,
                                     "teacher": "Unassigned",
                                     "parent": "Unassigned",
+                                    "teacherId": "Unassigned",
+                                    "parentId": "Unassigned",
                                   });
                                 } else if (selectedRole == 'Teacher') {
-                                  _teachers.add(name);
-                                  // Optionally update your local mock auth list to allow logging in
+                                  _teachersData['name']?.add(name);
+                                  _teachersData['id']?.add(generatedId);
                                 } else {
-                                  _parents.add(name);
+                                  _parentsData['name']?.add(name);
+                                  _parentsData['id']?.add(generatedId);
                                 }
                               });
 
