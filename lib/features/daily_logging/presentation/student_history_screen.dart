@@ -14,7 +14,7 @@ class StudentHistoryScreen extends StatefulWidget {
 class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
   // Mock Data mimicking our Firestore schemas
   final String _parentPhone =
-      "03420530847"; // Populated from User document associated with parentId
+      "03275521191"; // Populated from User document associated with parentId
   final double _hifzPercentage =
       0.45; // Simulated: 45% completion based on Paras memorized
 
