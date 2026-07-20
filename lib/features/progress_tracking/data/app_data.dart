@@ -1,4 +1,16 @@
+import 'package:easy_localization/easy_localization.dart';
+
 class AppData {
+  static List<Map<String, dynamic>> attendanceLogs = [
+    {
+      "studentId": "std_8849204",
+      "studentName": "Ahmad Muhammad",
+      "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      "session": "session1",
+      "attendanceStatus": "present",
+    },
+  ];
+  static List<String> availableSessions = ["session1", "session2", "session3"];
   static List<Map<String, dynamic>> ProgressLogs = [
     {
       "logId": "log_5529104",
@@ -320,6 +332,22 @@ class AppData {
       if (index == 13 || index == 27) return "absent";
       if (index >= 16) return "unlogged";
       return "present";
+    });
+  }
+
+  //adding attendance log
+  static void addAttendanceLog(
+    String studentId,
+    String studentName,
+    String session,
+    String status,
+  ) {
+    attendanceLogs.add({
+      "studentId": studentId,
+      "studentName": studentName,
+      "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      "session": session,
+      "attendanceStatus": status,
     });
   }
 }

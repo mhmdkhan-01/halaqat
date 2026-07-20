@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 
 class DailyEntryScreen extends StatefulWidget {
   final String studentName;
@@ -23,11 +24,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
   late Set<String> _selectedSessions;
 
   // Available total sessions
-  final List<String> _availableSessions = [
-    "Session 1 (Sabaq)",
-    "Session 2 (Sabqi)",
-    "Session 3 (Manzil)",
-  ];
+  final List<String> _availableSessions = AppData.availableSessions;
 
   String _attendance = 'Present';
 
@@ -297,7 +294,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
           icon: const Icon(Icons.cancel_outlined),
         ),
         ButtonSegment<String>(
-          value: 'Leave',
+          value: 'Late',
           label: Text('leave'.tr()),
           icon: const Icon(Icons.hourglass_empty_outlined),
         ),
