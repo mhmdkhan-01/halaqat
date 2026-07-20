@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 
 class ManageSessionsScreen extends StatefulWidget {
   const ManageSessionsScreen({super.key});
@@ -10,26 +11,7 @@ class ManageSessionsScreen extends StatefulWidget {
 
 class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
   // Mock data representing the active session configurations
-  final List<Map<String, dynamic>> _sessions = [
-    {
-      "id": "1",
-      "name": "Session 1 (Sabaq)",
-      "startTime": const TimeOfDay(hour: 6, minute: 0),
-      "endTime": const TimeOfDay(hour: 9, minute: 0),
-    },
-    {
-      "id": "2",
-      "name": "Session 2 (Sabqi)",
-      "startTime": const TimeOfDay(hour: 10, minute: 0),
-      "endTime": const TimeOfDay(hour: 13, minute: 0),
-    },
-    {
-      "id": "3",
-      "name": "Session 3 (Manzil)",
-      "startTime": const TimeOfDay(hour: 14, minute: 0),
-      "endTime": const TimeOfDay(hour: 17, minute: 0),
-    },
-  ];
+  final List<Map<String, dynamic>> _sessions = AppData.getAvailableSessions();
 
   @override
   Widget build(BuildContext context) {
@@ -379,20 +361,22 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
                         if (nameController.text.isNotEmpty) {
                           setState(() {
                             if (isEditing) {
-                              _sessions[index!] = {
+                              final nsession = {
                                 "id": session['id'],
                                 "name": nameController.text,
                                 "startTime": selectedStartTime,
                                 "endTime": selectedEndTime,
                               };
+                              _sessions[index!] = nsession;
                             } else {
-                              _sessions.add({
+                              final newsession = {
                                 "id": DateTime.now().millisecondsSinceEpoch
                                     .toString(),
                                 "name": nameController.text,
                                 "startTime": selectedStartTime,
                                 "endTime": selectedEndTime,
-                              });
+                              };
+                              _sessions.add(newsession);
                             }
                           });
                           Navigator.pop(context);

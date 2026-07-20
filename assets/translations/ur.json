@@ -108,5 +108,7 @@
   "admin_panel": "ایڈمن پینل",
   "welcome_boss": "خوش آمدید، ایڈمن",
   "quick_actions": "فوری اقدامات",
-  "academic_setup": "تعلیمی سیٹ اپ"
+  "academic_setup": "تعلیمی سیٹ اپ",
+  "submit_attendance": "حاضری جمع کروائیں",
+  "late": "دیر"
 }

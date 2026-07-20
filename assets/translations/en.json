@@ -108,5 +108,7 @@
   "admin_panel": "Admin Panel",
   "welcome_boss": "Welcome, Admin",
   "quick_actions": "Quick Actions",
-  "academic_setup": "Academic Setup"
+  "academic_setup": "Academic Setup",
+  "submit_attendance": "Submit Attendance",
+  "late": "Late"
 }

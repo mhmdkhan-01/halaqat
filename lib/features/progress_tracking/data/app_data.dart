@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
 
 class AppData {
   static List<Map<String, dynamic>> attendanceLogs = [
@@ -10,7 +11,26 @@ class AppData {
       "attendanceStatus": "present",
     },
   ];
-  static List<String> availableSessions = ["session1", "session2", "session3"];
+  static List<Map<String, dynamic>> availableSessions = [
+    {
+      "id": "1",
+      "name": "Session 1 (Sabaq)",
+      "startTime": const TimeOfDay(hour: 6, minute: 0),
+      "endTime": const TimeOfDay(hour: 9, minute: 0),
+    },
+    {
+      "id": "2",
+      "name": "Session 2 (Sabqi)",
+      "startTime": const TimeOfDay(hour: 10, minute: 0),
+      "endTime": const TimeOfDay(hour: 13, minute: 0),
+    },
+    {
+      "id": "3",
+      "name": "Session 3 (Manzil)",
+      "startTime": const TimeOfDay(hour: 14, minute: 0),
+      "endTime": const TimeOfDay(hour: 17, minute: 0),
+    },
+  ];
   static List<Map<String, dynamic>> ProgressLogs = [
     {
       "logId": "log_5529104",
@@ -102,6 +122,7 @@ class AppData {
       "name": "Admin Muhammad",
       "role": "admin",
       "phoneNumber": "03000000001",
+      "password": "123456",
       "createdAt": "2026-05-01T10:00:00Z",
     },
     {
@@ -109,6 +130,7 @@ class AppData {
       "name": "Qari Sulaiman",
       "role": "teacher",
       "phoneNumber": "03001111111",
+      "password": "123456",
       "createdAt": "2026-05-01T10:15:00Z",
     },
     {
@@ -116,6 +138,7 @@ class AppData {
       "name": "Qari Tariq",
       "role": "teacher",
       "phoneNumber": "03002222222",
+      "password": "123456",
       "createdAt": "2026-05-02T11:00:00Z",
     },
     {
@@ -123,6 +146,7 @@ class AppData {
       "name": "Muhammad Bilal",
       "role": "parent",
       "phoneNumber": "03001234567", // Linked phone number for WhatsApp
+      "password": "123456",
       "createdAt": "2026-05-03T09:30:00Z",
     },
     {
@@ -130,6 +154,7 @@ class AppData {
       "name": "Yasir Khan",
       "role": "parent",
       "phoneNumber": "03007654321",
+      "password": "123456",
       "createdAt": "2026-05-03T09:45:00Z",
     },
   ];
@@ -139,12 +164,14 @@ class AppData {
     String name,
     String role,
     String phoneNumber,
+    String password,
   ) {
     users.add({
       "uid": uid,
       "name": name,
       "role": role,
       "phoneNumber": phoneNumber,
+      "password": password,
       "createdAt": DateTime.now().toIso8601String(),
     });
   }
@@ -264,9 +291,26 @@ class AppData {
 
   //helper to get total presents of today from Progress Logs
   static int gettotalAttendanceCount(String date, String status) {
-    return ProgressLogs.where(
-      (log) => log['date'] == date && log['attendanceStatus'] == status,
-    ).length;
+    return attendanceLogs
+        .where(
+          (log) => log['date'] == date && log['attendanceStatus'] == status,
+        )
+        .length;
+  }
+
+  static int getTotalAttendanceCountForSession(
+    String date,
+    String status,
+    String session,
+  ) {
+    return attendanceLogs
+        .where(
+          (log) =>
+              log['date'] == date &&
+              log['attendanceStatus'] == status &&
+              log['session'] == session,
+        )
+        .length;
   }
 
   // Formats data filtering specifically for the StudentHistoryScreen compatibility layout
@@ -349,5 +393,23 @@ class AppData {
       "session": session,
       "attendanceStatus": status,
     });
+  }
+
+  static List<String> getAvailableSessionsNames() {
+    return availableSessions
+        .map((session) => session["name"] as String)
+        .toList();
+  }
+
+  static void addNewSession(Map<String, dynamic> session) {
+    availableSessions.add(session);
+  }
+
+  static void updateSession(int index, Map<String, dynamic> session) {
+    availableSessions[index] = session;
+  }
+
+  static List<Map<String, dynamic>> getAvailableSessions() {
+    return availableSessions;
   }
 }

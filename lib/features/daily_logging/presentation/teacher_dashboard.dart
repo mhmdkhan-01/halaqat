@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 import 'daily_entry_screen.dart'; // Make sure this import matches your daily entry form path
 
 class TeacherDashboardTab extends StatefulWidget {
@@ -11,23 +12,7 @@ class TeacherDashboardTab extends StatefulWidget {
 
 class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
   // 1. Session Configurations with their designated times
-  final List<Map<String, dynamic>> _sessions = [
-    {
-      "name": "Session 1 (Sabaq)",
-      "startHour": 6, // 6:00 AM
-      "endHour": 9, // 9:00 AM
-    },
-    {
-      "name": "Session 2 (Sabqi)",
-      "startHour": 10, // 10:00 AM
-      "endHour": 13, // 1:00 PM
-    },
-    {
-      "name": "Session 3 (Manzil)",
-      "startHour": 14, // 2:00 PM
-      "endHour": 17, // 5:00 PM
-    },
-  ];
+  final List<Map<String, dynamic>> _sessions = AppData.availableSessions;
 
   late String _selectedSession;
   String _searchQuery = "";
@@ -35,7 +20,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
   // 2. Updated student records tracking attendance for *each* session individually
   final List<Map<String, dynamic>> _students = [
     {
-      "id": "1",
+      "studentId": "1",
       "name": "Hussein Muhammad",
       "para": 15,
       "sura": "Al-Kahf",
@@ -46,7 +31,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
       },
     },
     {
-      "id": "2",
+      "studentId": "2",
       "name": "Abdullah Ahmed",
       "status": "Present",
       "para": 30,
@@ -58,7 +43,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
       },
     },
     {
-      "id": "3",
+      "studentId": "3",
       "name": "Zubair Khan",
       "status": "Absent",
       "para": 3,
@@ -70,7 +55,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
       },
     },
     {
-      "id": "4",
+      "studentId": "4",
       "name": "Hamza Ali",
       "status": "Pending",
       "para": 1,
@@ -91,16 +76,29 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
 
   // 3. Helper to determine which session is currently running based on time
   String _getCurrentlyRunningSession() {
+    // 1. Guard against empty list to prevent RangeError on _sessions[0]
+    if (_sessions.isEmpty) {
+      return "No Sessions Available";
+    }
+
     final now = DateTime.now();
-    final hour = now.hour;
+    final currentHour = now.hour;
 
     for (var session in _sessions) {
-      if (hour >= session['startHour'] && hour < session['endHour']) {
-        return session['name'];
+      // 2. Safely cast to nullable TimeOfDay to avoid type errors if key is missing or null
+      final startTime = session["startTime"] as TimeOfDay?;
+      final endTime = session["endTime"] as TimeOfDay?;
+
+      // 3. Ensure both start and end times exist before comparing
+      if (startTime != null && endTime != null) {
+        if (currentHour >= startTime.hour && currentHour < endTime.hour) {
+          return session['name'] ?? _sessions[0]['name'];
+        }
       }
     }
-    // Fallback to Session 1 if current time is outside normal session blocks
-    return _sessions[0]['name'];
+
+    // 4. Safe fallback if current time falls outside defined session blocks
+    return _sessions[0]['name'] ?? "Session 1 (Sabaq)";
   }
 
   // Helper getter to filter students based on search query
@@ -116,10 +114,11 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
   int get _totalStudents => _filteredStudents.length;
 
   int get _presentTodayInSelectedSession {
-    return _filteredStudents.where((student) {
-      final sessionAttendance = student['attendance'] as Map<String, dynamic>;
-      return sessionAttendance[_selectedSession] == 'Present';
-    }).length;
+    return AppData.getTotalAttendanceCountForSession(
+      '',
+      'present',
+      _getCurrentlyRunningSession(),
+    );
   }
 
   int get _pendingInSelectedSession {
@@ -488,6 +487,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => DailyEntryScreen(
+                          studentId: student['studentId'],
                           studentName: student['name'],
                           // Pass the currently running session to auto-select it in DailyEntryScreen
                           initialSession: _selectedSession,

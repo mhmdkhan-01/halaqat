@@ -1,14 +1,18 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 
 class DailyEntryScreen extends StatefulWidget {
+  final String studentId;
   final String studentName;
   final String
   initialSession; // Added parameter to receive the auto-selected session
 
   const DailyEntryScreen({
     super.key,
+    required this.studentId,
     required this.studentName,
     required this.initialSession,
   });
@@ -24,7 +28,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
   late Set<String> _selectedSessions;
 
   // Available total sessions
-  final List<String> _availableSessions = AppData.availableSessions;
+  final List<String> _availableSessions = AppData.getAvailableSessionsNames();
 
   String _attendance = 'Present';
 
@@ -103,7 +107,30 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
                 const SizedBox(height: 8),
                 _buildAttendanceSelector(),
                 const SizedBox(height: 20),
-
+                //add submit button for attendance.
+                // 6. Submit Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F9D58),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: _submitAttendance,
+                    child: Text(
+                      'submit_attendance'.tr(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 if (_attendance == 'Present') ...[
                   const Divider(),
                   const SizedBox(height: 10),
@@ -295,7 +322,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
         ),
         ButtonSegment<String>(
           value: 'Late',
-          label: Text('leave'.tr()),
+          label: Text('late'.tr()),
           icon: const Icon(Icons.hourglass_empty_outlined),
         ),
       ],
@@ -328,6 +355,19 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
       debugPrint("Submitting for sessions: $_selectedSessions");
       debugPrint("Attendance: $_attendance");
       Navigator.pop(context);
+    }
+  }
+
+  void _submitAttendance() {
+    print(_attendance);
+    print(_selectedSessions);
+    for (var session in _selectedSessions) {
+      AppData.addAttendanceLog(
+        widget.studentId,
+        widget.studentName,
+        session,
+        _attendance,
+      );
     }
   }
 }

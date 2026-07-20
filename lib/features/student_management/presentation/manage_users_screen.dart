@@ -27,11 +27,12 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
 
   List<String> get _teachersList =>
       List<String>.from(_teachersData['name'] ?? []);
-  List<String> get _teachersIds => List<String>.from(_teachersData['id'] ?? []);
+  List<String> get _teachersIds =>
+      List<String>.from(_teachersData['uid'] ?? []);
 
   List<String> get _parentsList =>
       List<String>.from(_parentsData['name'] ?? []);
-  List<String> get _parentsIds => List<String>.from(_parentsData['id'] ?? []);
+  List<String> get _parentsIds => List<String>.from(_parentsData['uid'] ?? []);
 
   @override
   void initState() {
@@ -311,7 +312,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value:
+                    initialValue:
                         currentTeacher == "Unassigned" &&
                             _teachersList.isNotEmpty
                         ? null
@@ -341,7 +342,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value:
+                    initialValue:
                         currentParent == "Unassigned" && _parentsList.isNotEmpty
                         ? null
                         : currentParent,
@@ -619,10 +620,25 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                                   });
                                 } else if (selectedRole == 'Teacher') {
                                   _teachersData['name']?.add(name);
-                                  _teachersData['id']?.add(generatedId);
+                                  _teachersData['uid']?.add(generatedId);
+                                  AppData.addUser(
+                                    generatedId,
+                                    name,
+                                    'teacher',
+                                    phoneController.text.trim(),
+                                    passwordController.text.trim(),
+                                  );
                                 } else {
                                   _parentsData['name']?.add(name);
-                                  _parentsData['id']?.add(generatedId);
+                                  _parentsData['uid']?.add(generatedId);
+                                  AppData.addUser(
+                                    generatedId,
+                                    name,
+                                    'parent',
+
+                                    phoneController.text.trim(),
+                                    passwordController.text.trim(),
+                                  );
                                 }
                               });
 
