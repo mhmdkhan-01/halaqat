@@ -3,6 +3,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:halaqat/features/admin_portal/presentation/admin_dashboard_screen.dart';
 import 'package:halaqat/features/daily_logging/presentation/teacher_main_navigation.dart';
 import 'package:halaqat/features/parent_portal/presentation/parent_dashboard.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ==================== 1. SPLASH SCREEN ====================
 class SplashScreen extends StatefulWidget {
@@ -151,12 +153,27 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else if (email == "teacher" || email == "teacher@test.com") {
         // TODO: Route to TeacherDashboardScreen()
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const TeacherMainNavigation(),
-          ),
+        String res = AppData.validateLoginUser(
+          "03111111111",
+          _passwordController.text.trim(),
         );
+        if (res.split(':')[0] == "T") {
+          var sp = await SharedPreferences.getInstance();
+          sp.setString('uid', res.split(':')[1]);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TeacherMainNavigation(),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(res.split(':')[1]),
+              backgroundColor: const Color.fromARGB(255, 240, 6, 6),
+            ),
+          );
+        }
       } else if (email == "parent" || email == "parent@test.com") {
         // TODO: Route to ParentDashboardScreen()
         Navigator.pushReplacement(

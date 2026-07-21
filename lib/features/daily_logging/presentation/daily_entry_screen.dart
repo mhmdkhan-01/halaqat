@@ -59,7 +59,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.studentName),
+        title: Text(widget.studentName, style: TextStyle(fontSize: 22)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -106,7 +106,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
                 _buildAttendanceSelector(),
                 const SizedBox(height: 20),
                 //add submit button for attendance.
-                // 6. Submit Button
+                // Submit attendance Button
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -352,6 +352,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
       // (e.g. submit attendance/grades for all checked sessions at once!)
       debugPrint("Submitting for sessions: $_selectedSessions");
       debugPrint("Attendance: $_attendance");
+
       Navigator.pop(context);
     }
   }

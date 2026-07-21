@@ -319,7 +319,8 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
   }
 
   Widget _buildDailyHistoryCard(Map<String, dynamic> log) {
-    final bool isAbsent = log['attendance'] == 'absent';
+    final bool isAbsent =
+        log['attendance'].toString().toLowerCase() == 'absent';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),

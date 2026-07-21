@@ -44,6 +44,7 @@ class AppData {
         "para": 2,
         "startAyah": 142,
         "endAyah": 150,
+        "lines": 17,
         "grade": "Excellent",
       },
       "sabqi": {"para": 1, "pages": "10-15", "grade": "Good"},
@@ -61,6 +62,7 @@ class AppData {
         "para": 2,
         "startAyah": 142,
         "endAyah": 150,
+        "lines": 17,
         "grade": "Excellent",
       },
       "sabqi": {"para": 1, "pages": "10-15", "grade": "Good"},
@@ -78,6 +80,7 @@ class AppData {
         "para": 2,
         "startAyah": 130,
         "endAyah": 141,
+        "lines": 17,
         "grade": "Good",
       },
       "sabqi": {"para": 1, "pages": "5-10", "grade": "Excellent"},
@@ -129,7 +132,7 @@ class AppData {
       "uid": "teacher_uid_101",
       "name": "Qari Sulaiman",
       "role": "teacher",
-      "phoneNumber": "03001111111",
+      "phoneNumber": "03111111111",
       "password": "123456",
       "createdAt": "2026-05-01T10:15:00Z",
     },
@@ -285,15 +288,14 @@ class AppData {
         : ProgressLogs;
   }
 
-  static void addProgressLog(Map<String, dynamic> log) {
-    ProgressLogs.add(log);
-  }
-
   //helper to get total presents of today from Progress Logs
   static int gettotalAttendanceCount(String date, String status) {
     return attendanceLogs
         .where(
-          (log) => log['date'] == date && log['attendanceStatus'] == status,
+          (log) =>
+              log['date'] == date &&
+              log['attendanceStatus'].toString().toLowerCase() ==
+                  status.toLowerCase(),
         )
         .length;
   }
@@ -307,7 +309,8 @@ class AppData {
         .where(
           (log) =>
               log['date'] == date &&
-              log['attendanceStatus'] == status &&
+              log['attendanceStatus'].toString().toLowerCase() ==
+                  status.toLowerCase() &&
               log['session'] == session,
         )
         .length;
@@ -411,5 +414,47 @@ class AppData {
 
   static List<Map<String, dynamic>> getAvailableSessions() {
     return availableSessions;
+  }
+
+  static void addProgressLog(
+    String studentId,
+    String studentName,
+    String surah,
+    String para,
+    String lines,
+    String sabqi,
+    String manzil,
+    String remarks,
+  ) {
+    ProgressLogs.add({
+      "logId": DateTime.now().millisecondsSinceEpoch.toString(),
+      "studentId": studentId,
+      "studentName": studentName,
+      "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      "attendanceStatus": "present",
+      "sabaq": {"surah": surah, "para": para, "lines": lines},
+      "sabqi": sabqi,
+      "manzil": manzil,
+      "grade": remarks,
+    });
+  }
+
+  static String validateLoginUser(String uname, String password) {
+    Map<String, dynamic>? u = users
+        .where((user) => user['phoneNumber'] == uname)
+        .firstOrNull;
+    if (u == null) {
+      return "E:No User Found";
+    }
+    if (password != u['password']) {
+      return "E:Incorrect Password";
+    }
+    return "T:${u['uid']}";
+  }
+
+  static List<Map<String, dynamic>> getTeacherStudents(String teacherId) {
+    return students
+        .where((student) => student["teacherId"] == teacherId)
+        .toList();
   }
 }

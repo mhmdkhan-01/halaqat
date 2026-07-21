@@ -14,6 +14,7 @@ dependencies:
   easy_localization: ^3.0.8
   url_launcher: ^6.3.2
   flutter_launcher_icons: ^0.14.4
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
