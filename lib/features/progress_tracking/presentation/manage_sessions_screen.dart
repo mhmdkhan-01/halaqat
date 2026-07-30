@@ -10,8 +10,19 @@ class ManageSessionsScreen extends StatefulWidget {
 }
 
 class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
-  // Mock data representing the active session configurations
-  final List<Map<String, dynamic>> _sessions = AppData.getAvailableSessions();
+  late Future<List<Map<String, dynamic>>> _sessionsFuture;
+  List<Map<String, dynamic>> _loadedSessions = [];
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSessions();
+  }
+
+  void _loadSessions() {
+    _sessionsFuture = AppData.getAvailableSessions();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,17 +35,40 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1E293B),
       ),
-      body: _sessions.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              physics: const BouncingScrollPhysics(),
-              itemCount: _sessions.length,
-              itemBuilder: (context, index) {
-                final session = _sessions[index];
-                return _buildSessionCard(session, index);
-              },
-            ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _sessionsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !_isInitialized) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError && !_isInitialized) {
+            return Center(
+              child: Text("Error loading sessions: ${snapshot.error}"),
+            );
+          }
+
+          if (!_isInitialized && snapshot.hasData) {
+            _loadedSessions = snapshot.data!;
+            _isInitialized = true;
+          }
+
+          if (_loadedSessions.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            physics: const BouncingScrollPhysics(),
+            itemCount: _loadedSessions.length,
+            itemBuilder: (context, index) {
+              final session = _loadedSessions[index];
+              return _buildSessionCard(session, index);
+            },
+          );
+        },
+      ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -59,8 +93,6 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
       ),
     );
   }
-
-  // --- UI Components ---
 
   Widget _buildEmptyState() {
     return Center(
@@ -88,8 +120,13 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
   }
 
   Widget _buildSessionCard(Map<String, dynamic> session, int index) {
-    final startTimeStr = session['startTime'].format(context);
-    final endTimeStr = session['endTime'].format(context);
+    final startTime = session['startTime'] as TimeOfDay?;
+    final endTime = session['endTime'] as TimeOfDay?;
+
+    final startTimeStr = startTime != null
+        ? startTime.format(context)
+        : "--:--";
+    final endTimeStr = endTime != null ? endTime.format(context) : "--:--";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -106,10 +143,7 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -123,7 +157,7 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
           ),
         ),
         title: Text(
-          session['name'],
+          session['name'] ?? '',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
@@ -141,7 +175,7 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
                 style: const TextStyle(
                   color: Color(0xFF64748B),
                   fontWeight: FontWeight.w600,
-                  fontSize: 8,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -160,15 +194,13 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
                 Icons.delete_outline_rounded,
                 color: Colors.redAccent,
               ),
-              onPressed: () => _confirmDelete(index),
+              onPressed: () => _confirmDelete(session['id'], index),
             ),
           ],
         ),
       ),
     );
   }
-
-  // --- Sheets & Dialogs ---
 
   void _showSessionFormBottomSheet({
     Map<String, dynamic>? session,
@@ -179,10 +211,10 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
       text: isEditing ? session['name'] : "",
     );
     TimeOfDay selectedStartTime = isEditing
-        ? session['startTime']
+        ? (session['startTime'] ?? const TimeOfDay(hour: 8, minute: 0))
         : const TimeOfDay(hour: 8, minute: 0);
     TimeOfDay selectedEndTime = isEditing
-        ? session['endTime']
+        ? (session['endTime'] ?? const TimeOfDay(hour: 10, minute: 0))
         : const TimeOfDay(hour: 10, minute: 0);
 
     showModalBottomSheet(
@@ -359,26 +391,31 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
                       ),
                       onPressed: () {
                         if (nameController.text.isNotEmpty) {
+                          final newSessionData = {
+                            "id": isEditing
+                                ? session['id']
+                                : DateTime.now().millisecondsSinceEpoch
+                                      .toString(),
+                            "name": nameController.text,
+                            "startTime": selectedStartTime,
+                            "endTime": selectedEndTime,
+                          };
+
                           setState(() {
-                            if (isEditing) {
-                              final nsession = {
-                                "id": session['id'],
-                                "name": nameController.text,
-                                "startTime": selectedStartTime,
-                                "endTime": selectedEndTime,
-                              };
-                              _sessions[index!] = nsession;
+                            if (isEditing && index != null) {
+                              // Sync to AppData & local list
+                              AppData.updateSessionById(
+                                session['id'].toString(),
+                                newSessionData,
+                              );
+                              _loadedSessions[index] = newSessionData;
                             } else {
-                              final newsession = {
-                                "id": DateTime.now().millisecondsSinceEpoch
-                                    .toString(),
-                                "name": nameController.text,
-                                "startTime": selectedStartTime,
-                                "endTime": selectedEndTime,
-                              };
-                              _sessions.add(newsession);
+                              // Sync to AppData & local list
+                              AppData.addSession(newSessionData);
+                              _loadedSessions.add(newSessionData);
                             }
                           });
+
                           Navigator.pop(context);
                         }
                       },
@@ -400,7 +437,7 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
     );
   }
 
-  void _confirmDelete(int index) {
+  void _confirmDelete(String sessionId, int index) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -417,7 +454,9 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
           TextButton(
             onPressed: () {
               setState(() {
-                _sessions.removeAt(index);
+                // Sync to AppData & local list
+                AppData.deleteSessionById(sessionId);
+                _loadedSessions.removeAt(index);
               });
               Navigator.pop(context);
             },

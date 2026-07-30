@@ -358,8 +358,6 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
   }
 
   void _submitAttendance() {
-    print(_attendance);
-    print(_selectedSessions);
     for (var session in _selectedSessions) {
       AppData.addAttendanceLog(
         widget.studentId,
@@ -368,5 +366,6 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
         _attendance,
       );
     }
+    Navigator.pop(context);
   }
 }

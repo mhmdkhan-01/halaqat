@@ -1,7 +1,19 @@
+import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppData {
+  // Flag to simulate offline mode for testing/future connectivity check
+  static bool isOffline = false;
+
+  // Keys for SharedPreferences
+  static const String _keyStudents = "cached_students";
+  static const String _keySessions = "cached_sessions";
+  static const String _keyProgressLogs = "cached_progress_logs";
+  static const String _keyUsers = "cached_users";
+
+  // Existing Mock Memory Data
   static List<Map<String, dynamic>> attendanceLogs = [
     {
       "studentId": "std_8849204",
@@ -11,6 +23,7 @@ class AppData {
       "attendanceStatus": "present",
     },
   ];
+
   static List<Map<String, dynamic>> availableSessions = [
     {
       "id": "1",
@@ -31,6 +44,7 @@ class AppData {
       "endTime": const TimeOfDay(hour: 17, minute: 0),
     },
   ];
+
   static List<Map<String, dynamic>> ProgressLogs = [
     {
       "logId": "log_5529104",
@@ -112,13 +126,14 @@ class AppData {
     {
       "studentId": "std_9920134",
       "name": "Hamza Yousaf",
-      "teacherId": "Unassigned",
-      "parentId": "Unassigned",
-      "assignedTeacherName": "Unassigned",
-      "assignedParentName": "Unassigned",
+      "teacherId": "teacher_uid_101",
+      "parentId": "parent_uid_202",
+      "assignedTeacherName": "Qari Sulaiman",
+      "assignedParentName": "Yasir Khan",
       "createdAt": "2026-07-16T10:00:00Z",
     },
   ];
+
   static List<Map<String, dynamic>> users = [
     {
       "uid": "admin_uid_001",
@@ -148,7 +163,7 @@ class AppData {
       "uid": "parent_uid_201",
       "name": "Muhammad Bilal",
       "role": "parent",
-      "phoneNumber": "03001234567", // Linked phone number for WhatsApp
+      "phoneNumber": "03001234567",
       "password": "123456",
       "createdAt": "2026-05-03T09:30:00Z",
     },
@@ -161,7 +176,128 @@ class AppData {
       "createdAt": "2026-05-03T09:45:00Z",
     },
   ];
-  //Helper to add a user (teacher/parent)
+
+  // ==========================================
+  // SHARED PREFERENCES HELPER METHODS
+  // ==========================================
+
+  static Future<void> _saveToPrefs(String key, dynamic data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, jsonEncode(data));
+  }
+
+  static Future<List<Map<String, dynamic>>?> _getFromPrefs(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = prefs.getString(key);
+    if (jsonString != null && jsonString.isNotEmpty) {
+      final List decoded = jsonDecode(jsonString);
+      return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    return null;
+  }
+
+  // CALL THIS FUNCTION ON USER LOGOUT
+  static Future<void> clearLocalCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyStudents);
+    await prefs.remove(_keySessions);
+    await prefs.remove(_keyProgressLogs);
+    await prefs.remove(_keyUsers);
+  }
+
+  // ==========================================
+  // 1. TEACHER STUDENTS WITH OFFLINE SUPPORT
+  // ==========================================
+  static Future<List<Map<String, dynamic>>> getTeacherStudents(
+    String teacherId,
+  ) async {
+    if (isOffline) {
+      final cached = await _getFromPrefs(_keyStudents);
+      if (cached != null) {
+        return cached
+            .where((student) => student["teacherId"] == teacherId)
+            .toList();
+      }
+    }
+
+    // ONLINE FLOW: (Future Firebase query will go here)
+    final freshData = students
+        .where((student) => student["teacherId"] == teacherId)
+        .toList();
+
+    // Cache updated list locally
+    await _saveToPrefs(_keyStudents, students);
+    return freshData;
+  }
+
+  // ==========================================
+  // 2. SESSIONS WITH OFFLINE SUPPORT & TIMEOFDAY ENCODING
+  // ==========================================
+  static Future<List<Map<String, dynamic>>> getAvailableSessions() async {
+    if (isOffline) {
+      final cached = await _getFromPrefs(_keySessions);
+      if (cached != null) {
+        // Convert stored hour & minute back to TimeOfDay objects
+        return cached.map((s) {
+          return {
+            "id": s["id"],
+            "name": s["name"],
+            "startTime": TimeOfDay(
+              hour: s["startHour"] ?? 8,
+              minute: s["startMinute"] ?? 0,
+            ),
+            "endTime": TimeOfDay(
+              hour: s["endHour"] ?? 10,
+              minute: s["endMinute"] ?? 0,
+            ),
+          };
+        }).toList();
+      }
+    }
+
+    // ONLINE FLOW: (Future Firebase query will go here)
+    final freshSessions = List<Map<String, dynamic>>.from(availableSessions);
+
+    // Encode TimeOfDay objects into primitive JSON fields for local saving
+    final encodableSessions = availableSessions.map((s) {
+      final start = s["startTime"] as TimeOfDay?;
+      final end = s["endTime"] as TimeOfDay?;
+      return {
+        "id": s["id"],
+        "name": s["name"],
+        "startHour": start?.hour,
+        "startMinute": start?.minute,
+        "endHour": end?.hour,
+        "endMinute": end?.minute,
+      };
+    }).toList();
+
+    await _saveToPrefs(_keySessions, encodableSessions);
+    return freshSessions;
+  }
+
+  // ==========================================
+  // 3. PROGRESS LOGS WITH OFFLINE SUPPORT
+  // ==========================================
+  static Future<List<Map<String, dynamic>>> getProgressLogsAsync() async {
+    if (isOffline) {
+      final cached = await _getFromPrefs(_keyProgressLogs);
+      if (cached != null) return cached;
+    }
+
+    // ONLINE FLOW: (Future Firebase query will go here)
+    final freshLogs = getProgressLogs();
+    await _saveToPrefs(_keyProgressLogs, freshLogs);
+    return freshLogs;
+  }
+
+  // ==========================================
+  // EXISTING SYNCHRONOUS HELPERS & MUTATIONS
+  // ==========================================
+
+  static List<Map<String, dynamic>> getUsers() => users;
+  static List<Map<String, dynamic>> getStudents() => students;
+
   static void addUser(
     String uid,
     String name,
@@ -177,43 +313,21 @@ class AppData {
       "password": password,
       "createdAt": DateTime.now().toIso8601String(),
     });
+    _saveToPrefs(_keyUsers, users);
   }
 
-  // ==========================================
-  // 1. USERS COLLECTION (Firestore JSON Schema)
-  // ==========================================
-  // Maps directly to: FirebaseFirestore.instance.collection('users')
-  static List<Map<String, dynamic>> getUsers() {
-    return users;
-  }
+  static int getTotalStudentsCount() => getStudents().length;
+  static int getTotalTeachersCount() => getUserNamesByRole('teacher').length;
 
-  //Helper For Total Students Count in Dashboard Screen
-  static int getTotalStudentsCount() {
-    return getStudents().length;
-  }
-
-  //Helpet for Total Teachers Count in Dashboard Screen
-  static int getTotalTeachersCount() {
-    return getUserNamesByRole('teacher').length;
-  }
-
-  // Filtered helper for ManageUsersScreen tabs (Column-based format)
   static Map<String, List<String>> getUserNamesByRole(String role) {
-    // 1. Filter the list only once for better performance
     final filteredUsers = getUsers()
         .where((user) => user['role'] == role)
         .toList();
-
-    // 2. Return the separated lists
     return {
       'uid': filteredUsers.map((user) => user['uid'] as String).toList(),
       'name': filteredUsers.map((user) => user['name'] as String).toList(),
     };
   }
-
-  // ==========================================
-  // 2. STUDENTS COLLECTION (Firestore JSON Schema)
-  // ==========================================
 
   static void addStudent(String studentId, String name) {
     students.add({
@@ -223,8 +337,9 @@ class AppData {
       "parentId": "Unassigned",
       "assignedTeacherName": "Unassigned",
       "assignedParentName": "Unassigned",
-      "createdAt": DateTime.now(),
+      "createdAt": DateTime.now().toIso8601String(),
     });
+    _saveToPrefs(_keyStudents, students);
   }
 
   static void assignRelations(
@@ -238,14 +353,9 @@ class AppData {
     students[index]['assignedTeacherName'] = teacher;
     students[index]['teacherId'] = teacherId;
     students[index]['parentId'] = parentId;
+    _saveToPrefs(_keyStudents, students);
   }
 
-  // Maps directly to: FirebaseFirestore.instance.collection('students')
-  static List<Map<String, dynamic>> getStudents() {
-    return students;
-  }
-
-  // Legacy layout compatibility helper for your existing ManageUsersScreen mapping
   static List<Map<String, dynamic>> getStudentsLegacyFormat() {
     return getStudents().map((student) {
       return {
@@ -257,7 +367,6 @@ class AppData {
     }).toList();
   }
 
-  // Helper to fetch associated parent contact details for WhatsApp Integration
   static String getParentPhoneNumber(String parentName) {
     final parent = getUsers().firstWhere(
       (user) => user['role'] == 'parent' && user['name'] == parentName,
@@ -266,10 +375,6 @@ class AppData {
     return parent['phoneNumber'];
   }
 
-  // ==========================================
-  // 3. PROGRESS LOGS COLLECTION (Firestore JSON Schema)
-  // ==========================================
-  // Maps directly to: FirebaseFirestore.instance.collection('progress_logs')
   static List<Map<String, dynamic>> getProgressLogs() {
     return ProgressLogs.isEmpty
         ? [
@@ -288,7 +393,6 @@ class AppData {
         : ProgressLogs;
   }
 
-  //helper to get total presents of today from Progress Logs
   static int gettotalAttendanceCount(String date, String status) {
     return attendanceLogs
         .where(
@@ -316,7 +420,23 @@ class AppData {
         .length;
   }
 
-  // Formats data filtering specifically for the StudentHistoryScreen compatibility layout
+  static Map<String, dynamic> getAttendanceStatusForSession(
+    String session,
+    String studentId,
+    String date,
+  ) {
+    return attendanceLogs
+            .where(
+              (log) =>
+                  log['studentId'] == studentId &&
+                  log['session'] == session &&
+                  log['date'] == date,
+            )
+            .map((log) => {"attendanceStatus": log["attendanceStatus"]})
+            .firstOrNull ??
+        {"attendanceStatus": "Pending"};
+  }
+
   static List<Map<String, dynamic>> getHistoryLogsForStudent(String studentId) {
     return getProgressLogs()
         .where((log) => log['studentId'] == studentId)
@@ -331,11 +451,6 @@ class AppData {
         )
         .toList();
   }
-
-  // ==========================================
-  // 4. SESSIONS COLLECTION & EXAMS COLLECTION
-  // ==========================================
-  // For manage_sessions_screen.dart & exam_management_screen.dart
 
   static List<Map<String, dynamic>> getSessions() {
     return [
@@ -357,11 +472,7 @@ class AppData {
       },
     ];
   }
-  // ==========================================
-  // ADD THIS INSIDE YOUR EXISTING APPDATA CLASS
-  // ==========================================
 
-  // Returns overall monthly summary analytics for a student
   static Map<String, dynamic> getStudentAnalytics(String studentId) {
     return {
       "totalNewPages": 14,
@@ -373,7 +484,6 @@ class AppData {
     };
   }
 
-  // Returns a raw matrix map representing the day-by-day attendance status for the month grid
   static List<String> getMonthlyCalendarAttendance(String studentId) {
     return List.generate(30, (index) {
       if (index == 13 || index == 27) return "absent";
@@ -382,7 +492,6 @@ class AppData {
     });
   }
 
-  //adding attendance log
   static void addAttendanceLog(
     String studentId,
     String studentName,
@@ -406,14 +515,12 @@ class AppData {
 
   static void addNewSession(Map<String, dynamic> session) {
     availableSessions.add(session);
+    getAvailableSessions(); // Re-caches updated list
   }
 
   static void updateSession(int index, Map<String, dynamic> session) {
     availableSessions[index] = session;
-  }
-
-  static List<Map<String, dynamic>> getAvailableSessions() {
-    return availableSessions;
+    getAvailableSessions(); // Re-caches updated list
   }
 
   static void addProgressLog(
@@ -437,6 +544,7 @@ class AppData {
       "manzil": manzil,
       "grade": remarks,
     });
+    _saveToPrefs(_keyProgressLogs, ProgressLogs);
   }
 
   static String validateLoginUser(String uname, String password) {
@@ -452,9 +560,24 @@ class AppData {
     return "T:${u['uid']}";
   }
 
-  static List<Map<String, dynamic>> getTeacherStudents(String teacherId) {
-    return students
-        .where((student) => student["teacherId"] == teacherId)
-        .toList();
+  static void addSession(Map<String, dynamic> session) {
+    availableSessions.add(session);
+    getAvailableSessions();
+  }
+
+  static void updateSessionById(
+    String id,
+    Map<String, dynamic> updatedSession,
+  ) {
+    final index = availableSessions.indexWhere((s) => s['id'] == id);
+    if (index != -1) {
+      availableSessions[index] = updatedSession;
+      getAvailableSessions();
+    }
+  }
+
+  static void deleteSessionById(String id) {
+    availableSessions.removeWhere((s) => s['id'] == id);
+    getAvailableSessions();
   }
 }
