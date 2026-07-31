@@ -123,7 +123,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
   };
 
   String _attendance = 'Present';
-
+  List<String> remarks = ['Excellent', 'Excellent', 'Excellent'];
   final _paraController = TextEditingController();
   final _suraController = TextEditingController();
   final _linesController = TextEditingController();
@@ -371,8 +371,9 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-
+                  const SizedBox(height: 8),
+                  _buildRemarksSelector(0),
+                  SizedBox(height: 20),
                   // 3. Sabqi Label
                   Text(
                     'sabqi'.tr(),
@@ -390,6 +391,8 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
                       border: const OutlineInputBorder(),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  _buildRemarksSelector(1),
                   const SizedBox(height: 20),
 
                   // 4. Manzil Label
@@ -409,6 +412,8 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
                       border: const OutlineInputBorder(),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  _buildRemarksSelector(2),
                   const SizedBox(height: 20),
                 ],
 
@@ -539,6 +544,46 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
     );
   }
 
+  Widget _buildRemarksSelector(int ind) {
+    return SegmentedButton<String>(
+      segments: [
+        ButtonSegment<String>(
+          value: 'Excellent',
+          label: Text('excellent'.tr(), style: TextStyle(fontSize: 12)),
+          icon: const Icon(Icons.thumb_up_outlined),
+        ),
+        ButtonSegment<String>(
+          value: 'Good',
+          label: Text('good'.tr(), style: TextStyle(fontSize: 12)),
+          icon: const Icon(Icons.check_circle_outline),
+        ),
+        ButtonSegment<String>(
+          value: 'Needs Practice',
+          label: Text('needs_practice'.tr(), style: TextStyle(fontSize: 12)),
+          icon: const Icon(Icons.thumb_down_outlined),
+        ),
+      ],
+      selected: {remarks[ind]},
+      onSelectionChanged: (Set<String> newSelection) {
+        setState(() {
+          remarks[ind] = newSelection.first;
+        });
+      },
+      style: SegmentedButton.styleFrom(
+        selectedBackgroundColor: remarks[ind] == 'Excellent'
+            ? Colors.green[100]
+            : remarks[ind] == 'Good'
+            ? Colors.blue[100]
+            : Colors.orange[100],
+        selectedForegroundColor: remarks[ind] == 'Excellent'
+            ? Colors.green[800]
+            : remarks[ind] == 'Good'
+            ? Colors.blue[800]
+            : Colors.orange[800],
+      ),
+    );
+  }
+
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       // Form submission logic
@@ -554,7 +599,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
         _linesController.text.trim(),
         _sabqiController.text.trim(),
         _manzilController.text.trim(),
-        _remarksController.text.trim(),
+        remarks,
       );
       Navigator.pop(context);
     }

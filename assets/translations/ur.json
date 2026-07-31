@@ -110,5 +110,9 @@
   "quick_actions": "فوری اقدامات",
   "academic_setup": "تعلیمی سیٹ اپ",
   "submit_attendance": "حاضری جمع کروائیں",
-  "late": "دیر"
+  "late": "دیر",
+  "excellent": "ممتاز",
+  "good": "عمدہ",
+  "needs_practice": "مشق کی ضرورت ہے",
+  "logging_for_session": "سبق کے لیے اندارج"
 }

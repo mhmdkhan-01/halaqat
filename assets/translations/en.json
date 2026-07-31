@@ -110,5 +110,9 @@
   "quick_actions": "Quick Actions",
   "academic_setup": "Academic Setup",
   "submit_attendance": "Submit Attendance",
-  "late": "Late"
+  "late": "Late",
+  "excellent": "Excellent",
+  "good": "Good",
+  "needs_practice": "Needs Practice",
+  "logging_for_session": "Logging for Session"
 }

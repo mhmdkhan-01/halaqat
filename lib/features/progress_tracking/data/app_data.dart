@@ -531,7 +531,7 @@ class AppData {
     String lines,
     String sabqi,
     String manzil,
-    String remarks,
+    List<String> remarks,
   ) async {
     ProgressLogs.add({
       "logId": DateTime.now().millisecondsSinceEpoch.toString(),
