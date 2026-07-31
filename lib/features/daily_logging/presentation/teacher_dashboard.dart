@@ -165,7 +165,6 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                   ),
                 ),
               ),
-
               // 2. Dynamic Session Selector
               SliverToBoxAdapter(
                 child: Padding(
@@ -174,6 +173,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                     height: 42,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
+
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: sessions.length,
@@ -475,8 +475,8 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                       const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
                     ],
                   ),
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => DailyEntryScreen(
@@ -486,6 +486,9 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                         ),
                       ),
                     );
+                    if (mounted) {
+                      setState(() {});
+                    }
                   },
                 ),
               ),

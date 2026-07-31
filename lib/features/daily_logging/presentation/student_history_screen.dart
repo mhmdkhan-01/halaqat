@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 import 'package:url_launcher/url_launcher.dart';
+// Import your AppData file here
+// import 'path_to_app_data.dart';
 
 class StudentHistoryScreen extends StatefulWidget {
   final Map<String, dynamic> student;
@@ -12,61 +15,45 @@ class StudentHistoryScreen extends StatefulWidget {
 }
 
 class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
-  // Mock Data mimicking our Firestore schemas
-  final String _parentPhone =
-      "03275521191"; // Populated from User document associated with parentId
-  final double _hifzPercentage =
-      0.45; // Simulated: 45% completion based on Paras memorized
+  late String _parentPhone;
+  late double _hifzPercentage;
+  late List<Map<String, dynamic>> _historyLogs;
 
-  final List<Map<String, dynamic>> _historyLogs = [
-    {
-      "date": "2026-07-16",
-      "attendance": "present",
-      "sabaq": {
-        "surah": "Al-Baqarah",
-        "para": 2,
-        "startAyah": 142,
-        "endAyah": 150,
-        "grade": "Excellent",
-      },
-      "sabqi": {"para": 1, "pages": "10-15", "grade": "Good"},
-      "manzil": {"para": 30, "grade": "Excellent"},
-    },
-    {
-      "date": "2026-07-15",
-      "attendance": "present",
-      "sabaq": {
-        "surah": "Al-Baqarah",
-        "para": 2,
-        "startAyah": 130,
-        "endAyah": 141,
-        "grade": "Good",
-      },
-      "sabqi": {"para": 1, "pages": "5-10", "grade": "Excellent"},
-      "manzil": {"para": 29, "grade": "Needs Practice"},
-    },
-    {
-      "date": "2026-07-14",
-      "attendance": "absent",
-      "sabaq": null,
-      "sabqi": null,
-      "manzil": null,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _parentPhone = widget.student['parentPhone'] ?? "N/A";
+
+    // Fetch logs specific to this student from AppData
+    _historyLogs = AppData.ProgressLogs.where(
+      (log) => log['studentId'] == widget.student['studentId'],
+    ).toList();
+
+    // Calculate completion progress based on current Para
+    int currentPara = widget.student['para'] is int
+        ? widget.student['para']
+        : int.tryParse(widget.student['para'].toString()) ?? 1;
+    _hifzPercentage = (currentPara / 30).clamp(0.0, 1.0);
+  }
 
   void _launchWhatsApp() async {
-    // Strip everything except numbers
     final cleanPhone = _parentPhone.replaceAll(RegExp(r'[^\d]'), '');
+    if (cleanPhone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No valid parent phone number available."),
+        ),
+      );
+      return;
+    }
+
     final message =
         "Assalamu Alaikum, contacting regarding ${widget.student['name']}.";
-
-    // Standard universal web link
     final whatsappWebUrl = Uri.parse(
       "https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}",
     );
 
     try {
-      // Force Android to handle it via standard web rendering protocol, bypassing component checks
       await launchUrl(whatsappWebUrl, mode: LaunchMode.platformDefault);
     } catch (e) {
       if (mounted) {
@@ -79,22 +66,38 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Safely extract recent Sabaq metrics from history
+    // Extract metrics dynamically
     final latestLog = _historyLogs.firstWhere(
       (log) => log['sabaq'] != null,
       orElse: () => {},
     );
-    final currentSura = latestLog.isNotEmpty
-        ? latestLog['sabaq']['surah']
+
+    final currentSura = latestLog.isNotEmpty && latestLog['sabaq'] != null
+        ? latestLog['sabaq']['surah'] ?? "N/A"
         : "N/A";
-    final currentPara = latestLog.isNotEmpty
-        ? latestLog['sabaq']['para']
-        : "N/A";
+
+    final currentPara = widget.student['para'] ?? "1";
+
+    // Dynamic attendance count
+    final totalPresent = AppData.attendanceLogs
+        .where(
+          (a) =>
+              a['studentId'] == widget.student['studentId'] &&
+              a['attendanceStatus'] == 'present',
+        )
+        .length;
+    final totalAbsent = AppData.attendanceLogs
+        .where(
+          (a) =>
+              a['studentId'] == widget.student['studentId'] &&
+              a['attendanceStatus'] == 'absent',
+        )
+        .length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(widget.student['name']),
+        title: Text(widget.student['name'] ?? "Student History"),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
@@ -103,7 +106,7 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // Section 1: Parent Information & Messaging Hub
+          // Section 1: Parent Info & WhatsApp Action
           SliverToBoxAdapter(
             child: Container(
               color: Colors.white,
@@ -133,6 +136,13 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
                               color: Color(0xFF1E293B),
                             ),
                           ),
+                          Text(
+                            _parentPhone,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ),
                         ],
                       ),
                       IconButton(
@@ -148,7 +158,7 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
                   ),
                   const Divider(height: 32),
 
-                  // Section 2: Progress Metrics & Hifz Gauge
+                  // Section 2: Stats Grid
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -164,13 +174,14 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
                       ),
                       _buildQuickStatTile(
                         "Attendance",
-                        "14 Present / 1 Absent",
+                        "$totalPresent Present / $totalAbsent Absent",
                         Colors.orange,
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
 
+                  // Section 3: Progress Bar
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -210,7 +221,7 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
             ),
           ),
 
-          // Section 3: History Timeline Logs
+          // Section 4: History Logs Header
           SliverPadding(
             padding: const EdgeInsets.all(20),
             sliver: SliverToBoxAdapter(
@@ -225,15 +236,29 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
             ),
           ),
 
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final log = _historyLogs[index];
-                return _buildDailyHistoryCard(log);
-              }, childCount: _historyLogs.length),
+          // Section 5: History Card List
+          if (_historyLogs.isEmpty)
+            const SliverToBoxAdapter(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Text(
+                    "No history logs found for this student.",
+                    style: TextStyle(color: Color(0xFF94A3B8)),
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final log = _historyLogs[index];
+                  return _buildDailyHistoryCard(log);
+                }, childCount: _historyLogs.length),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -274,7 +299,8 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
   }
 
   Widget _buildDailyHistoryCard(Map<String, dynamic> log) {
-    final bool isAbsent = log['attendance'] == 'absent';
+    final bool isAbsent = log['attendanceStatus'] == 'absent';
+    final sabaq = log['sabaq'];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -304,7 +330,7 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  DateFormat('yyyy-MM-dd').format(DateTime.parse(log['date'])),
+                  log['date'] ?? '',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF475569),
@@ -323,7 +349,9 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    log['attendance'].toString().toUpperCase(),
+                    (log['attendanceStatus'] ?? 'PRESENT')
+                        .toString()
+                        .toUpperCase(),
                     style: TextStyle(
                       color: isAbsent
                           ? Colors.redAccent
@@ -337,7 +365,7 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
             ),
           ),
 
-          // Core Progress Grid Details
+          // Core Progress Details
           if (isAbsent)
             const Padding(
               padding: EdgeInsets.all(16.0),
@@ -355,24 +383,33 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  _buildProgressComponentRow(
-                    "Sabaq (New)",
-                    "${log['sabaq']['surah']} (Ayah ${log['sabaq']['startAyah']}-${log['sabaq']['endAyah']})",
-                    log['sabaq']['grade'],
-                    Colors.teal,
-                  ),
-                  const Divider(height: 20),
+                  if (sabaq != null)
+                    _buildProgressComponentRow(
+                      "Sabaq (New)",
+                      "${sabaq['surah']} (Ayah ${sabaq['startAyah']}-${sabaq['endAyah']})",
+                      sabaq['grade'] ?? 'N/A',
+                      Colors.teal,
+                    ),
+                  if (sabaq != null) const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Sabqi (Recent)",
-                    "Para ${log['sabqi']['para']} (Pgs: ${log['sabqi']['pages']})",
-                    log['sabqi']['grade'],
+                    log['sabqi'] is Map
+                        ? "Para ${log['sabqi']['para']} (Pgs: ${log['sabqi']['pages']})"
+                        : (log['sabqi']?.toString() ?? 'N/A'),
+                    log['sabqi'] is Map
+                        ? (log['sabqi']['grade'] ?? 'N/A')
+                        : 'Completed',
                     Colors.indigo,
                   ),
                   const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Manzil (Revision)",
-                    "Para ${log['manzil']['para']}",
-                    log['manzil']['grade'],
+                    log['manzil'] is Map
+                        ? "Para ${log['manzil']['para']}"
+                        : (log['manzil']?.toString() ?? 'N/A'),
+                    log['manzil'] is Map
+                        ? (log['manzil']['grade'] ?? 'N/A')
+                        : 'Completed',
                     Colors.amber[800]!,
                   ),
                 ],
@@ -392,27 +429,29 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: color,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              details,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1E293B),
+              const SizedBox(height: 4),
+              Text(
+                details,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1E293B),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

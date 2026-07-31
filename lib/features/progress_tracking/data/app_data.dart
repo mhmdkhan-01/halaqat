@@ -140,7 +140,7 @@ class AppData {
       "name": "Admin Muhammad",
       "role": "admin",
       "phoneNumber": "03000000001",
-      "password": "123456",
+      "password": "password",
       "createdAt": "2026-05-01T10:00:00Z",
     },
     {
@@ -523,7 +523,7 @@ class AppData {
     getAvailableSessions(); // Re-caches updated list
   }
 
-  static void addProgressLog(
+  static Future<void> addProgressLog(
     String studentId,
     String studentName,
     String surah,
@@ -532,7 +532,7 @@ class AppData {
     String sabqi,
     String manzil,
     String remarks,
-  ) {
+  ) async {
     ProgressLogs.add({
       "logId": DateTime.now().millisecondsSinceEpoch.toString(),
       "studentId": studentId,
@@ -579,5 +579,43 @@ class AppData {
   static void deleteSessionById(String id) {
     availableSessions.removeWhere((s) => s['id'] == id);
     getAvailableSessions();
+  }
+
+  static Future<List<Map<String, dynamic>>> getDirectoryStudents() async {
+    // Simulating async fetch delay from AppData
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    return AppData.students.map((student) {
+      // 1. Resolve Parent details from AppData.users
+      final parentUser = AppData.users.firstWhere(
+        (user) => user['uid'] == student['parentId'],
+        orElse: () => {},
+      );
+
+      // 2. Fetch latest ProgressLog for this student to get current Para
+      final studentLogs = AppData.ProgressLogs.where(
+        (log) => log['studentId'] == student['studentId'],
+      ).toList();
+
+      int latestPara = 1;
+      if (studentLogs.isNotEmpty) {
+        final latestLog = studentLogs.last;
+        if (latestLog['sabaq'] != null && latestLog['sabaq']['para'] != null) {
+          latestPara = latestLog['sabaq']['para'];
+        }
+      }
+
+      // 3. Map into exact schema expected by DirectoryScreen & StudentHistoryScreen
+      return {
+        'studentId': student['studentId'],
+        'name': student['name'] ?? 'Unknown Student',
+        'para': latestPara,
+        'parentPhone': parentUser['phoneNumber'] ?? 'N/A',
+        'parent':
+            parentUser['name'] ?? student['assignedParentName'] ?? 'Unassigned',
+        'parentId': student['parentId'],
+        'teacherId': student['teacherId'],
+      };
+    }).toList();
   }
 }
