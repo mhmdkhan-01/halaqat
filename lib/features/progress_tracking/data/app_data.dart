@@ -12,7 +12,8 @@ class AppData {
   static const String _keySessions = "cached_sessions";
   static const String _keyProgressLogs = "cached_progress_logs";
   static const String _keyUsers = "cached_users";
-
+  static final Map<String, Map<String, Map<String, String>>> _attendanceLogs =
+      {};
   // Existing Mock Memory Data
   static List<Map<String, dynamic>> attendanceLogs = [
     {
@@ -59,46 +60,10 @@ class AppData {
         "startAyah": 142,
         "endAyah": 150,
         "lines": 17,
-        "grade": "Excellent",
       },
-      "sabqi": {"para": 1, "pages": "10-15", "grade": "Good"},
-      "manzil": {"para": 30, "grade": "Excellent"},
-    },
-    {
-      "logId": "log_5529103",
-      "studentId": "std_9920134",
-      "studentName": "Hamza Yousaf",
-      "loggedByTeacherId": "teacher_uid_101",
-      "date": "2026-07-16",
-      "attendanceStatus": "absent",
-      "sabaq": {
-        "surah": "Al-Baqarah",
-        "para": 2,
-        "startAyah": 142,
-        "endAyah": 150,
-        "lines": 17,
-        "grade": "Excellent",
-      },
-      "sabqi": {"para": 1, "pages": "10-15", "grade": "Good"},
-      "manzil": {"para": 30, "grade": "Excellent"},
-    },
-    {
-      "logId": "log_5529102",
-      "studentId": "std_8849204",
-      "studentName": "Ahmad Muhammad",
-      "loggedByTeacherId": "teacher_uid_101",
-      "date": "2026-07-15",
-      "attendanceStatus": "present",
-      "sabaq": {
-        "surah": "Al-Baqarah",
-        "para": 2,
-        "startAyah": 130,
-        "endAyah": 141,
-        "lines": 17,
-        "grade": "Good",
-      },
-      "sabqi": {"para": 1, "pages": "5-10", "grade": "Excellent"},
-      "manzil": {"para": 29, "grade": "Needs Practice"},
+      "sabqi": "para 1 page 2 to 5",
+      "manzil": "para 2",
+      "grade": ["Excellent", "Good", "Needs Practice"],
     },
     {
       "logId": "log_5529101",
@@ -110,6 +75,7 @@ class AppData {
       "sabaq": null,
       "sabqi": null,
       "manzil": null,
+      "grade": ["N/A", "N/A", "N/A"],
     },
   ];
 
@@ -148,7 +114,7 @@ class AppData {
       "name": "Qari Sulaiman",
       "role": "teacher",
       "phoneNumber": "03111111111",
-      "password": "123456",
+      "password": "password",
       "createdAt": "2026-05-01T10:15:00Z",
     },
     {
@@ -156,7 +122,7 @@ class AppData {
       "name": "Qari Tariq",
       "role": "teacher",
       "phoneNumber": "03002222222",
-      "password": "123456",
+      "password": "password",
       "createdAt": "2026-05-02T11:00:00Z",
     },
     {
@@ -228,6 +194,14 @@ class AppData {
     // Cache updated list locally
     await _saveToPrefs(_keyStudents, students);
     return freshData;
+  }
+
+  static Future<String> getUsersNameById(String uid) async {
+    var u = users.where((user) => user["uid"] == uid).firstOrNull;
+    if (u == null) {
+      return "Unknown";
+    }
+    return u["name"];
   }
 
   // ==========================================
@@ -376,7 +350,7 @@ class AppData {
   }
 
   static List<Map<String, dynamic>> getProgressLogs() {
-    return ProgressLogs.isEmpty
+    final logs = ProgressLogs.isEmpty
         ? [
             {
               "logId": "log_5529101",
@@ -390,7 +364,12 @@ class AppData {
               "manzil": null,
             },
           ]
-        : ProgressLogs;
+        : List<Map<String, dynamic>>.from(ProgressLogs);
+
+    // Sort descending (newest first)
+    logs.sort((a, b) => b['date'].toString().compareTo(a['date'].toString()));
+
+    return logs;
   }
 
   static int gettotalAttendanceCount(String date, String status) {
@@ -453,10 +432,7 @@ class AppData {
   }
 
   static List<Map<String, dynamic>> getSessions() {
-    return [
-      {"sessionId": "sess_01", "name": "Term 1 - 2026", "isActive": true},
-      {"sessionId": "sess_02", "name": "Term 2 - 2026", "isActive": false},
-    ];
+    return availableSessions;
   }
 
   static List<Map<String, dynamic>> getExamResults() {
@@ -617,5 +593,53 @@ class AppData {
         'teacherId': student['teacherId'],
       };
     }).toList();
+  }
+
+  static Future<bool> saveAttendanceLog({
+    required DateTime date,
+    required List<String> sessionNames,
+    required Map<String, String> studentAttendance, // Map<studentId, status>
+  }) async {
+    try {
+      // Format date as YYYY-MM-DD
+      final String dateKey =
+          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+      // Ensure the date entry exists
+      _attendanceLogs.putIfAbsent(dateKey, () => {});
+
+      // For each active session submitted, record the attendance snapshot
+      for (var session in sessionNames) {
+        _attendanceLogs[dateKey]![session] = Map<String, String>.from(
+          studentAttendance,
+        );
+      }
+
+      // Debug log to verify structure in console
+      print("Saved Logs for $dateKey: ${_attendanceLogs[dateKey]}");
+      return true;
+    } catch (e) {
+      print("Failed to save attendance: $e");
+      return false;
+    }
+  }
+
+  /// Helper to get attendance stats for a specific day
+  static Map<String, int> getDailySummary(DateTime date) {
+    final String dateKey =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    int present = 0, absent = 0, lateCount = 0;
+
+    if (_attendanceLogs.containsKey(dateKey)) {
+      _attendanceLogs[dateKey]!.forEach((session, students) {
+        students.forEach((studentId, status) {
+          if (status == 'Present') present++;
+          if (status == 'Absent') absent++;
+          if (status == 'Late') lateCount++;
+        });
+      });
+    }
+
+    return {'present': present, 'absent': absent, 'late': lateCount};
   }
 }

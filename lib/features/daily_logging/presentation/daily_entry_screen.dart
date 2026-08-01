@@ -178,261 +178,255 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // NEW: Session Selection Header
+                // Text(
+                //   'logging_for_session'
+                //       .tr(), // Translation key for "Logging for Session"
+                //   style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                //     fontWeight: FontWeight.bold,
+                //   ),
+                // ),
+                // const SizedBox(height: 8),
+                // _buildSessionChipSelector(),
+                // const SizedBox(height: 20),
+
+                // // 1. Attendance Label
+                // Text(
+                //   'attendance'.tr(),
+                //   style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                //     fontWeight: FontWeight.bold,
+                //   ),
+                // ),
+                // const SizedBox(height: 8),
+                // _buildAttendanceSelector(),
+                // const SizedBox(height: 20),
+                // //add submit button for attendance.
+                // // Submit attendance Button
+                // SizedBox(
+                //   width: double.infinity,
+                //   height: 50,
+                //   child: ElevatedButton(
+                //     style: ElevatedButton.styleFrom(
+                //       backgroundColor: const Color(0xFF0F9D58),
+                //       foregroundColor: Colors.white,
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.circular(8),
+                //       ),
+                //     ),
+                //     onPressed: _submitAttendance,
+                //     child: Text(
+                //       'submit_attendance'.tr(),
+                //       style: const TextStyle(
+                //         fontSize: 16,
+                //         fontWeight: FontWeight.bold,
+                //       ),
+                //     ),
+                //   ),
+                // ),
+                const SizedBox(height: 10),
+
+                // 2. Sabaq Label
                 Text(
-                  'logging_for_session'
-                      .tr(), // Translation key for "Logging for Session"
+                  'sabaq'.tr(),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: Colors.green[700],
                   ),
                 ),
-                const SizedBox(height: 8),
-                _buildSessionChipSelector(),
-                const SizedBox(height: 20),
-
-                // 1. Attendance Label
-                Text(
-                  'attendance'.tr(),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _buildAttendanceSelector(),
-                const SizedBox(height: 20),
-                //add submit button for attendance.
-                // Submit attendance Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F9D58),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onPressed: _submitAttendance,
-                    child: Text(
-                      'submit_attendance'.tr(),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (_attendance == 'Present') ...[
-                  const Divider(),
-                  const SizedBox(height: 10),
-
-                  // 2. Sabaq Label
-                  Text(
-                    'sabaq'.tr(),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green[700],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 1. Para Number Input
-                      Expanded(
-                        child: TextFormField(
-                          controller: _paraController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: 'para_no'.tr(),
-                            border: const OutlineInputBorder(),
-                          ),
-                          onChanged: (val) {
-                            // Re-trigger UI updates when Para number changes
-                            setState(() {});
-                          },
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Para Number Input
+                    Expanded(
+                      child: TextFormField(
+                        controller: _paraController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'para_no'.tr(),
+                          border: const OutlineInputBorder(),
                         ),
+                        onChanged: (val) {
+                          // Re-trigger UI updates when Para number changes
+                          setState(() {});
+                        },
                       ),
-                      const SizedBox(width: 10),
+                    ),
+                    const SizedBox(width: 10),
 
-                      // 2. Surah Autocomplete Field (Filtered by Para)
-                      Expanded(
-                        child: RawAutocomplete<String>(
-                          textEditingController: _suraController,
-                          focusNode: FocusNode(),
-                          optionsBuilder: (TextEditingValue textEditingValue) {
-                            // Parse current Para number from controller
-                            final selectedPara = int.tryParse(
-                              _paraController.text.trim(),
-                            );
-                            if (selectedPara == null ||
-                                !quranParaSurahMap.containsKey(selectedPara)) {
-                              return const Iterable<String>.empty();
-                            }
+                    // 2. Surah Autocomplete Field (Filtered by Para)
+                    Expanded(
+                      child: RawAutocomplete<String>(
+                        textEditingController: _suraController,
+                        focusNode: FocusNode(),
+                        optionsBuilder: (TextEditingValue textEditingValue) {
+                          // Parse current Para number from controller
+                          final selectedPara = int.tryParse(
+                            _paraController.text.trim(),
+                          );
+                          if (selectedPara == null ||
+                              !quranParaSurahMap.containsKey(selectedPara)) {
+                            return const Iterable<String>.empty();
+                          }
 
-                            final availableSurahs =
-                                quranParaSurahMap[selectedPara]!;
+                          final availableSurahs =
+                              quranParaSurahMap[selectedPara]!;
 
-                            // Show all Surahs of Para if input is empty, or filter by typed query
-                            if (textEditingValue.text.isEmpty) {
-                              return availableSurahs;
-                            }
+                          // Show all Surahs of Para if input is empty, or filter by typed query
+                          if (textEditingValue.text.isEmpty) {
+                            return availableSurahs;
+                          }
 
-                            return availableSurahs.where((String surah) {
-                              return surah.contains(
-                                textEditingValue.text.trim(),
-                              );
-                            });
-                          },
-                          onSelected: (String selection) {
-                            _suraController.text = selection;
-                          },
-                          fieldViewBuilder:
-                              (
-                                context,
-                                controller,
-                                focusNode,
-                                onEditingComplete,
-                              ) {
-                                return Directionality(
-                                  textDirection: ui.TextDirection.rtl,
-                                  child: TextFormField(
-                                    controller: controller,
-                                    focusNode: focusNode,
-                                    decoration: InputDecoration(
-                                      labelText: 'sura'.tr(),
-                                      hintText: "اختر السورة",
-                                      border: const OutlineInputBorder(),
-                                      suffixIcon: const Icon(
-                                        Icons.arrow_drop_down,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                          optionsViewBuilder: (context, onSelected, options) {
-                            return Align(
-                              alignment: Alignment.topLeft,
-                              child: Material(
-                                elevation: 4,
-                                borderRadius: BorderRadius.circular(8),
-                                color: Colors.white,
-                                child: Container(
-                                  constraints: const BoxConstraints(
-                                    maxHeight: 200,
-                                    maxWidth: 220,
-                                  ),
-                                  child: Directionality(
-                                    textDirection: ui.TextDirection.rtl,
-                                    child: ListView.separated(
-                                      padding: EdgeInsets.zero,
-                                      shrinkWrap: true,
-                                      itemCount: options.length,
-                                      separatorBuilder: (context, index) =>
-                                          const Divider(height: 1),
-                                      itemBuilder:
-                                          (BuildContext context, int index) {
-                                            final String option = options
-                                                .elementAt(index);
-                                            return ListTile(
-                                              dense: true,
-                                              title: Text(
-                                                option,
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF1E293B),
-                                                ),
-                                              ),
-                                              onTap: () => onSelected(option),
-                                            );
-                                          },
+                          return availableSurahs.where((String surah) {
+                            return surah.contains(textEditingValue.text.trim());
+                          });
+                        },
+                        onSelected: (String selection) {
+                          _suraController.text = selection;
+                        },
+                        fieldViewBuilder:
+                            (
+                              context,
+                              controller,
+                              focusNode,
+                              onEditingComplete,
+                            ) {
+                              return Directionality(
+                                textDirection: ui.TextDirection.rtl,
+                                child: TextFormField(
+                                  controller: controller,
+                                  focusNode: focusNode,
+                                  decoration: InputDecoration(
+                                    labelText: 'sura'.tr(),
+                                    hintText: "اختر السورة",
+                                    border: const OutlineInputBorder(),
+                                    suffixIcon: const Icon(
+                                      Icons.arrow_drop_down,
                                     ),
                                   ),
                                 ),
+                              );
+                            },
+                        optionsViewBuilder: (context, onSelected, options) {
+                          return Align(
+                            alignment: Alignment.topLeft,
+                            child: Material(
+                              elevation: 4,
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.white,
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  maxHeight: 200,
+                                  maxWidth: 220,
+                                ),
+                                child: Directionality(
+                                  textDirection: ui.TextDirection.rtl,
+                                  child: ListView.separated(
+                                    padding: EdgeInsets.zero,
+                                    shrinkWrap: true,
+                                    itemCount: options.length,
+                                    separatorBuilder: (context, index) =>
+                                        const Divider(height: 1),
+                                    itemBuilder:
+                                        (BuildContext context, int index) {
+                                          final String option = options
+                                              .elementAt(index);
+                                          return ListTile(
+                                            dense: true,
+                                            title: Text(
+                                              option,
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF1E293B),
+                                              ),
+                                            ),
+                                            onTap: () => onSelected(option),
+                                          );
+                                        },
+                                  ),
+                                ),
                               ),
-                            );
-                          },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // 3. Lines/Pages Input
+                    Expanded(
+                      child: TextFormField(
+                        controller: _linesController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'lines_pages'.tr(),
+                          border: const OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(width: 10),
-
-                      // 3. Lines/Pages Input
-                      Expanded(
-                        child: TextFormField(
-                          controller: _linesController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: 'lines_pages'.tr(),
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _buildRemarksSelector(0),
-                  SizedBox(height: 20),
-                  // 3. Sabqi Label
-                  Text(
-                    'sabqi'.tr(),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange[700],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _sabqiController,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      hintText: 'sabqi_hint'.tr(),
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildRemarksSelector(1),
-                  const SizedBox(height: 20),
-
-                  // 4. Manzil Label
-                  Text(
-                    'manzil'.tr(),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[700],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _manzilController,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      hintText: 'manzil_hint'.tr(),
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildRemarksSelector(2),
-                  const SizedBox(height: 20),
-                ],
-
-                // 5. Remarks Label
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _buildRemarksSelector(0),
+                SizedBox(height: 20),
+                // 3. Sabqi Label
                 Text(
-                  'remarks'.tr(),
+                  'sabqi'.tr(),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: Colors.orange[700],
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
-                  controller: _remarksController,
-                  maxLines: 3,
+                  controller: _sabqiController,
+                  maxLines: 2,
                   decoration: InputDecoration(
-                    hintText: 'remarks_hint'.tr(),
+                    hintText: 'sabqi_hint'.tr(),
                     border: const OutlineInputBorder(),
                   ),
                 ),
+                const SizedBox(height: 14),
+                _buildRemarksSelector(1),
+                const SizedBox(height: 20),
+
+                // 4. Manzil Label
+                Text(
+                  'manzil'.tr(),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[700],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _manzilController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    hintText: 'manzil_hint'.tr(),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _buildRemarksSelector(2),
+                const SizedBox(height: 20),
+
+                // 5. Remarks Label
+                // Text(
+                //   'remarks'.tr(),
+                //   style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                //     fontWeight: FontWeight.bold,
+                //   ),
+                // ),
+                // const SizedBox(height: 8),
+                // TextFormField(
+                //   controller: _remarksController,
+                //   maxLines: 3,
+                //   decoration: InputDecoration(
+                //     hintText: 'remarks_hint'.tr(),
+                //     border: const OutlineInputBorder(),
+                //   ),
+                // ),
                 const SizedBox(height: 30),
 
                 // 6. Submit Button
@@ -504,45 +498,45 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
     );
   }
 
-  Widget _buildAttendanceSelector() {
-    return SegmentedButton<String>(
-      segments: [
-        ButtonSegment<String>(
-          value: 'Present',
-          label: Text('present'.tr()),
-          icon: const Icon(Icons.check_circle_outline),
-        ),
-        ButtonSegment<String>(
-          value: 'Absent',
-          label: Text('absent'.tr()),
-          icon: const Icon(Icons.cancel_outlined),
-        ),
-        ButtonSegment<String>(
-          value: 'Late',
-          label: Text('late'.tr()),
-          icon: const Icon(Icons.hourglass_empty_outlined),
-        ),
-      ],
-      selected: {_attendance},
-      onSelectionChanged: (Set<String> newSelection) {
-        setState(() {
-          _attendance = newSelection.first;
-        });
-      },
-      style: SegmentedButton.styleFrom(
-        selectedBackgroundColor: _attendance == 'Present'
-            ? Colors.green[100]
-            : _attendance == 'Absent'
-            ? Colors.red[100]
-            : Colors.orange[100],
-        selectedForegroundColor: _attendance == 'Present'
-            ? Colors.green[800]
-            : _attendance == 'Absent'
-            ? Colors.red[800]
-            : Colors.orange[800],
-      ),
-    );
-  }
+  // Widget _buildAttendanceSelector() {
+  //   return SegmentedButton<String>(
+  //     segments: [
+  //       ButtonSegment<String>(
+  //         value: 'Present',
+  //         label: Text('present'.tr()),
+  //         icon: const Icon(Icons.check_circle_outline),
+  //       ),
+  //       ButtonSegment<String>(
+  //         value: 'Absent',
+  //         label: Text('absent'.tr()),
+  //         icon: const Icon(Icons.cancel_outlined),
+  //       ),
+  //       ButtonSegment<String>(
+  //         value: 'Late',
+  //         label: Text('late'.tr()),
+  //         icon: const Icon(Icons.hourglass_empty_outlined),
+  //       ),
+  //     ],
+  //     selected: {_attendance},
+  //     onSelectionChanged: (Set<String> newSelection) {
+  //       setState(() {
+  //         _attendance = newSelection.first;
+  //       });
+  //     },
+  //     style: SegmentedButton.styleFrom(
+  //       selectedBackgroundColor: _attendance == 'Present'
+  //           ? Colors.green[100]
+  //           : _attendance == 'Absent'
+  //           ? Colors.red[100]
+  //           : Colors.orange[100],
+  //       selectedForegroundColor: _attendance == 'Present'
+  //           ? Colors.green[800]
+  //           : _attendance == 'Absent'
+  //           ? Colors.red[800]
+  //           : Colors.orange[800],
+  //     ),
+  //   );
+  // }
 
   Widget _buildRemarksSelector(int ind) {
     return SegmentedButton<String>(
@@ -585,35 +579,70 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
   }
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      // Form submission logic
-      // Note: You can access selected sessions via `_selectedSessions`
-      // (e.g. submit attendance/grades for all checked sessions at once!)
-      debugPrint("Submitting for sessions: $_selectedSessions");
-      debugPrint("Attendance: $_attendance");
-      await AppData.addProgressLog(
-        widget.studentId,
-        widget.studentName,
-        _suraController.text.trim(),
-        _paraController.text.trim(),
-        _linesController.text.trim(),
-        _sabqiController.text.trim(),
-        _manzilController.text.trim(),
-        remarks,
-      );
-      Navigator.pop(context);
+    // 1. Validate form fields BEFORE showing the dialog
+    if (!_formKey.currentState!.validate()) {
+      return; // Stop if form inputs are invalid
     }
-  }
 
-  void _submitAttendance() {
-    for (var session in _selectedSessions) {
-      AppData.addAttendanceLog(
-        widget.studentId,
-        widget.studentName,
-        session,
-        _attendance,
-      );
-    }
-    Navigator.pop(context);
+    // 2. Wrap AlertDialog in showDialog to render it
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text("Confirm Submission"),
+          content: const Text(
+            "Are you sure you want to submit this progress log?",
+          ),
+          actions: [
+            // Cancel Button
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("Cancel"),
+            ),
+
+            // Confirm Button
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                // Close confirmation dialog first
+                Navigator.pop(dialogContext);
+
+                // Debug logs
+                debugPrint("Submitting for sessions: $_selectedSessions");
+                debugPrint("Attendance: $_attendance");
+
+                // Async API / Storage call
+                await AppData.addProgressLog(
+                  widget.studentId,
+                  widget.studentName,
+                  _suraController.text.trim(),
+                  _paraController.text.trim(),
+                  _linesController.text.trim(),
+                  _sabqiController.text.trim(),
+                  _manzilController.text.trim(),
+                  remarks,
+                );
+
+                // Navigate back or show success feedback safely
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Progress log saved successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  // Optionally pop the screen or clear form here:
+                  // Navigator.pop(context);
+                }
+              },
+              child: const Text("Confirm"),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

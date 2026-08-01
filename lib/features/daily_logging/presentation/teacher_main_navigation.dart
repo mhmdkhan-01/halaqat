@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
+import 'package:halaqat/features/daily_logging/presentation/attendance_tab.dart';
 import 'package:halaqat/features/daily_logging/presentation/student_history_screen.dart';
 import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'teacher_dashboard.dart'; // Imports Tab 1
 
 class TeacherMainNavigation extends StatefulWidget {
@@ -23,7 +25,8 @@ class _TeacherMainNavigationState extends State<TeacherMainNavigation> {
     _tabs = [
       const TeacherDashboardTab(), // Tab 1
       const StudentDirectoryTab(), // Tab 2
-      const TeacherSettingsTab(), // Tab 3
+      const AttendanceTab(), // Tab 3
+      const TeacherSettingsTab(), // Tab 4
     ];
   }
 
@@ -98,6 +101,17 @@ class _TeacherMainNavigationState extends State<TeacherMainNavigation> {
                       color: Color(0xFF0A5C36),
                     ),
                     label: 'directory'.tr(),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(
+                      Icons.list_alt_outlined,
+                      color: Color(0xFF64748B),
+                    ),
+                    selectedIcon: const Icon(
+                      Icons.list_alt,
+                      color: Color(0xFF0A5C36),
+                    ),
+                    label: 'attendance'.tr(),
                   ),
                   NavigationDestination(
                     icon: const Icon(
@@ -349,145 +363,175 @@ class _StudentDirectoryTabState extends State<StudentDirectoryTab> {
 }
 
 // ================= Tab 3: Settings =================
-class TeacherSettingsTab extends StatelessWidget {
+class TeacherSettingsTab extends StatefulWidget {
   const TeacherSettingsTab({super.key});
+
+  @override
+  State<TeacherSettingsTab> createState() => _TeacherSettingsTabState();
+}
+
+class _TeacherSettingsTabState extends State<TeacherSettingsTab> {
+  bool isLoading = true;
+  late String tuid;
+  late String teacherName;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    getTeacherUid();
+  }
+
+  Future<void> getTeacherUid() async {
+    var sp = await SharedPreferences.getInstance();
+    tuid = sp.getString("uid") ?? "N/A";
+    teacherName = await AppData.getUsersNameById(tuid);
+    isLoading = false;
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8F6),
       appBar: AppBar(title: Text('settings'.tr())),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Container(
+      body: (isLoading)
+          ? Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 15,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: const Color(0xFF0A5C36),
-                    child: const Text(
-                      "T",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Qari Ahmed",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        "Halaqa A",
-                        style: TextStyle(
-                          color: Color(0xFF64748B),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.015),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
               child: Column(
                 children: [
-                  ListTile(
-                    leading: const Icon(
-                      Icons.language,
-                      color: Color(0xFF0A5C36),
-                    ),
-                    title: const Text(
-                      "Language / زبان",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    trailing: Text(
-                      context.locale == const Locale('en') ? "English" : "اردو",
-                      style: const TextStyle(
-                        color: Color(0xFF0A5C36),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onTap: () {
-                      if (context.locale == const Locale('en')) {
-                        context.setLocale(const Locale('ur'));
-                      } else {
-                        context.setLocale(const Locale('en'));
-                      }
-                    },
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  ListTile(
-                    leading: const Icon(Icons.logout, color: Color(0xFF0A5C36)),
-                    title: const Text(
-                      "Log Out",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    trailing: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 14,
-                      color: Color(0xFF94A3B8),
-                    ),
-                    onTap: () {
-                      // Handle log out
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 15,
+                          offset: const Offset(0, 6),
                         ),
-                      );
-                    },
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: const Color(0xFF0A5C36),
+                          child: Text(
+                            teacherName[0].toUpperCase(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              teacherName,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              "Halaqa A",
+                              style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.015),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(
+                            Icons.language,
+                            color: Color(0xFF0A5C36),
+                          ),
+                          title: const Text(
+                            "Language / زبان",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                          trailing: Text(
+                            context.locale == const Locale('en')
+                                ? "English"
+                                : "اردو",
+                            style: const TextStyle(
+                              color: Color(0xFF0A5C36),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          onTap: () {
+                            if (context.locale == const Locale('en')) {
+                              context.setLocale(const Locale('ur'));
+                            } else {
+                              context.setLocale(const Locale('en'));
+                            }
+                          },
+                        ),
+                        const Divider(height: 1, indent: 56),
+                        ListTile(
+                          leading: const Icon(
+                            Icons.logout,
+                            color: Color(0xFF0A5C36),
+                          ),
+                          title: const Text(
+                            "Log Out",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 14,
+                            color: Color(0xFF94A3B8),
+                          ),
+                          onTap: () {
+                            // Handle log out
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LoginScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }

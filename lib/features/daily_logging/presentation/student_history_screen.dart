@@ -25,9 +25,9 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
     _parentPhone = widget.student['parentPhone'] ?? "N/A";
 
     // Fetch logs specific to this student from AppData
-    _historyLogs = AppData.ProgressLogs.where(
-      (log) => log['studentId'] == widget.student['studentId'],
-    ).toList();
+    _historyLogs = AppData.getProgressLogs()
+        .where((log) => log['studentId'] == widget.student['studentId'])
+        .toList();
 
     // Calculate completion progress based on current Para
     int currentPara = widget.student['para'] is int
@@ -160,7 +160,7 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
 
                   // Section 2: Stats Grid
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildQuickStatTile(
                         "Current Sura",
@@ -172,10 +172,23 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
                         "Para $currentPara",
                         Colors.indigo,
                       ),
+                    ],
+                  ),
+                  SizedBox(height: 20),
+
+                  // Section 2: Stats Grid
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
                       _buildQuickStatTile(
                         "Attendance",
-                        "$totalPresent Present / $totalAbsent Absent",
+                        "$totalPresent Present ",
                         Colors.orange,
+                      ),
+                      _buildQuickStatTile(
+                        "Attendance",
+                        "$totalAbsent Absent ",
+                        Colors.red,
                       ),
                     ],
                   ),
@@ -266,7 +279,7 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
 
   Widget _buildQuickStatTile(String label, String value, Color color) {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.27,
+      width: MediaQuery.of(context).size.width * 0.35,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withAlpha(20),
@@ -386,30 +399,22 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
                   if (sabaq != null)
                     _buildProgressComponentRow(
                       "Sabaq (New)",
-                      "${sabaq['surah']} (Ayah ${sabaq['startAyah']}-${sabaq['endAyah']})",
-                      sabaq['grade'] ?? 'N/A',
+                      "${sabaq['surah']} (Para ${sabaq['para']} - Lines ${sabaq['lines']})",
+                      log['grade'][0] ?? 'N/A',
                       Colors.teal,
                     ),
                   if (sabaq != null) const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Sabqi (Recent)",
-                    log['sabqi'] is Map
-                        ? "Para ${log['sabqi']['para']} (Pgs: ${log['sabqi']['pages']})"
-                        : (log['sabqi']?.toString() ?? 'N/A'),
-                    log['sabqi'] is Map
-                        ? (log['sabqi']['grade'] ?? 'N/A')
-                        : 'Completed',
+                    log['sabqi'] ?? 'N/A',
+                    log['grade'][1] ?? 'N/A',
                     Colors.indigo,
                   ),
                   const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Manzil (Revision)",
-                    log['manzil'] is Map
-                        ? "Para ${log['manzil']['para']}"
-                        : (log['manzil']?.toString() ?? 'N/A'),
-                    log['manzil'] is Map
-                        ? (log['manzil']['grade'] ?? 'N/A')
-                        : 'Completed',
+                    log['manzil'] ?? 'N/A',
+                    log['grade'][2] ?? 'N/A',
                     Colors.amber[800]!,
                   ),
                 ],
