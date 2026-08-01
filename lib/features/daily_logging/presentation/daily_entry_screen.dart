@@ -27,7 +27,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
   late Set<String> _selectedSessions;
 
   // Available total sessions
-  final List<String> _availableSessions = AppData.getAvailableSessionsNames();
+  // final List<String> _availableSessions = AppData.getAvailableSessionsNames();
 
   final Map<int, List<String>> quranParaSurahMap = {
     1: ["الفاتحة", "البقرة"],
@@ -460,43 +460,43 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
   }
 
   // Visual Multi-Select Session Filter (or quick focus switcher)
-  Widget _buildSessionChipSelector() {
-    return Wrap(
-      spacing: 8.0,
-      runSpacing: 4.0,
-      children: _availableSessions.map((session) {
-        final isSelected = _selectedSessions.contains(session);
-        return FilterChip(
-          label: Text(
-            session.tr(),
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: isSelected ? Colors.white : Colors.black87,
-            ),
-          ),
-          selected: isSelected,
-          onSelected: (bool selected) {
-            setState(() {
-              if (selected) {
-                _selectedSessions.add(session);
-              } else {
-                // Ensure at least one session is always selected to submit against
-                if (_selectedSessions.length > 1) {
-                  _selectedSessions.remove(session);
-                }
-              }
-            });
-          },
-          selectedColor: const Color(0xFF0A5C36),
-          checkmarkColor: Colors.white,
-          backgroundColor: Colors.grey[200],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        );
-      }).toList(),
-    );
-  }
+  // Widget _buildSessionChipSelector() {
+  //   return Wrap(
+  //     spacing: 8.0,
+  //     runSpacing: 4.0,
+  //     children: _availableSessions.map((session) {
+  //       final isSelected = _selectedSessions.contains(session);
+  //       return FilterChip(
+  //         label: Text(
+  //           session.tr(),
+  //           style: TextStyle(
+  //             fontWeight: FontWeight.w600,
+  //             color: isSelected ? Colors.white : Colors.black87,
+  //           ),
+  //         ),
+  //         selected: isSelected,
+  //         onSelected: (bool selected) {
+  //           setState(() {
+  //             if (selected) {
+  //               _selectedSessions.add(session);
+  //             } else {
+  //               // Ensure at least one session is always selected to submit against
+  //               if (_selectedSessions.length > 1) {
+  //                 _selectedSessions.remove(session);
+  //               }
+  //             }
+  //           });
+  //         },
+  //         selectedColor: const Color(0xFF0A5C36),
+  //         checkmarkColor: Colors.white,
+  //         backgroundColor: Colors.grey[200],
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(20),
+  //         ),
+  //       );
+  //     }).toList(),
+  //   );
+  // }
 
   // Widget _buildAttendanceSelector() {
   //   return SegmentedButton<String>(

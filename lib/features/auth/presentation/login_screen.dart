@@ -37,12 +37,25 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _navigateToLogin() async {
     // Simulate initial asset loading or DB initialization
-    await Future.delayed(const Duration(seconds: 3));
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+    var sp = await SharedPreferences.getInstance();
+    bool isLoggedIn = sp.getBool('isLoggedIn') ?? false;
+    String role = sp.getString('role') ?? '';
+    if (isLoggedIn && role.isNotEmpty) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const TeacherMainNavigation(),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
     }
   }
 
@@ -160,6 +173,8 @@ class _LoginScreenState extends State<LoginScreen> {
         if (res.split(':')[0] == "T") {
           var sp = await SharedPreferences.getInstance();
           sp.setString('uid', res.split(':')[1]);
+          sp.setBool('isLoggedIn', true);
+          sp.setString('role', 'teacher');
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
