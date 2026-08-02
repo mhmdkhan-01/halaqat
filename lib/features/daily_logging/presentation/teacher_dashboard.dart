@@ -447,10 +447,11 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                       color: Color(0xFF1E293B),
                     ),
                   ),
-                  subtitle: const Padding(
+                  subtitle: Padding(
                     padding: EdgeInsets.only(top: 4.0),
+                    //Fix here
                     child: Text(
-                      "Sabaq: Para 1 surah al baqara)",
+                      student['assignedParentName'] ?? "-",
                       style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                     ),
                   ),
