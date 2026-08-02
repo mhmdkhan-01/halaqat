@@ -156,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim().toLowerCase();
     //final password = _passwordController.text;
 
-    // TODO: [DATABASE/AUTH INTEGRATION]
+    // todo: [DATABASE/AUTH INTEGRATION]
     // 1. Call your Auth Repository/Service here.
     //    e.g., final user = await authService.signIn(email, password);
     // 2. Fetch user role from your SQL Server or Local Database.
@@ -173,7 +173,6 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
         );
       } else if (email == "teacher" || email == "teacher@test.com") {
-        // TODO: Route to TeacherDashboardScreen()
         String res = AppData.validateLoginUser(
           "03111111111",
           _passwordController.text.trim(),
@@ -196,7 +195,6 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else if (email == "parent" || email == "parent@test.com") {
-        // TODO: Route to ParentDashboardScreen()
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const ParentDashboard()),

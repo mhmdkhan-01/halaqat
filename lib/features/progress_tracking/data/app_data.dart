@@ -15,8 +15,10 @@ class AppData {
   static const String _keyUid = "uid";
   static const String _keyRole = "cached_role";
   static const String _keyIsLoggedIn = "cached_IsLoggedIn";
-
+  //for attendance tab to see if already submitted or not
   static Map<String, Set<String>> submittedSessions = {};
+  //for daily entery screen to see if progress log is already submitted or not
+  static Map<String, Set<String>> submittedProgressLogs = {};
 
   static final Map<String, Map<String, Map<String, String>>> _attendanceLogs = {
     "2026-08-01": {
@@ -726,5 +728,20 @@ class AppData {
 
   static Set<String> getSubmittedSessionsForDate(String date) {
     return submittedSessions[date] ?? {};
+  }
+
+  static void submitProgressLogForDate(String date, String studentId) {
+    if (!submittedProgressLogs.containsKey(date)) {
+      submittedProgressLogs[date] = {};
+    }
+    submittedProgressLogs[date]!.add(studentId);
+  }
+
+  static bool isProgressLogSubmitted(String date, String studentId) {
+    return submittedProgressLogs[date]?.contains(studentId) ?? false;
+  }
+
+  static Set<String> getSubmittedProgressLogsForDate(String date) {
+    return submittedProgressLogs[date] ?? {};
   }
 }

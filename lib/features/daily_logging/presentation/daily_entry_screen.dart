@@ -26,6 +26,8 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
   // Track selected sessions for entry (using a Set for flexible multi-session or single-session focus)
   late Set<String> _selectedSessions;
 
+  bool isAlreadySubmitted =
+      false; // Track if the form has already been submitted
   // Available total sessions
   // final List<String> _availableSessions = AppData.getAvailableSessionsNames();
 
@@ -136,6 +138,11 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
     super.initState();
     // Initialize with the session passed from the teacher dashboard
     _selectedSessions = {widget.initialSession};
+    isAlreadySubmitted = AppData.isProgressLogSubmitted(
+      DateTime.now().toString().split(' ')[0],
+      widget.studentId,
+    );
+    setState(() {});
   }
 
   @override
@@ -177,6 +184,31 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (isAlreadySubmitted)
+                  Container(
+                    width: double.infinity,
+                    color: Colors.amber.shade100,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 16,
+                    ),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.lock, color: Colors.amber, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Record is already submitted.',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 // NEW: Session Selection Header
                 // Text(
                 //   'logging_for_session'
@@ -435,15 +467,20 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
                   height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F9D58),
+                      backgroundColor: isAlreadySubmitted
+                          ? Colors.grey.shade400
+                          : const Color(0xFF0F9D58),
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey.shade400,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    onPressed: _submitForm,
+                    onPressed: isAlreadySubmitted ? null : _submitForm,
                     child: Text(
-                      'submit_log'.tr(),
+                      isAlreadySubmitted
+                          ? 'already_submitted'.tr()
+                          : 'submit_log'.tr(),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -626,6 +663,10 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
                   remarks,
                 );
 
+                AppData.submitProgressLogForDate(
+                  DateTime.now().toString().split(' ')[0],
+                  widget.studentId,
+                );
                 // Navigate back or show success feedback safely
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -634,8 +675,13 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
                       backgroundColor: Colors.green,
                     ),
                   );
-                  // Optionally pop the screen or clear form here:
-                  // Navigator.pop(context);
+
+                  _suraController.clear();
+                  _paraController.clear();
+                  _linesController.clear();
+                  _sabqiController.clear();
+                  _manzilController.clear();
+                  Navigator.pop(context);
                 }
               },
               child: const Text("Confirm"),
