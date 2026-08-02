@@ -142,13 +142,13 @@ class AdminHomeTab extends StatelessWidget {
                 ),
                 _buildSummaryCard(
                   "Total Presents",
-                  "${AppData.gettotalAttendanceCount(DateFormat('yyyy-MM-dd').format(DateTime.now()), 'present')}",
+                  "${AppData.getTotalAttendanceCount(DateFormat('yyyy-MM-dd').format(DateTime.now()), 'present')}",
                   Colors.orange,
                   Icons.check_circle,
                 ),
                 _buildSummaryCard(
                   "Total Absents",
-                  "${AppData.gettotalAttendanceCount(DateFormat('yyyy-MM-dd').format(DateTime.now()), 'absent')}",
+                  "${AppData.getTotalAttendanceCount(DateFormat('yyyy-MM-dd').format(DateTime.now()), 'absent')}",
                   Colors.red,
                   Icons.cancel,
                 ),

@@ -38,15 +38,24 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateToLogin() async {
     // Simulate initial asset loading or DB initialization
     var sp = await SharedPreferences.getInstance();
-    bool isLoggedIn = sp.getBool('isLoggedIn') ?? false;
-    String role = sp.getString('role') ?? '';
-    if (isLoggedIn && role.isNotEmpty) {
+    Map<String, dynamic> loginInfo = await AppData.getLoginInfo();
+
+    bool isLoggedIn = loginInfo['isLoggedIn'] ?? false;
+    String role = loginInfo['role'] ?? '';
+    if (isLoggedIn && role == 'teacher') {
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => const TeacherMainNavigation(),
           ),
+        );
+      }
+    } else if (isLoggedIn && role == 'admin') {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
         );
       }
     } else {
@@ -160,6 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (mounted) {
       // Mock Routing validation
       if (email == "admin" || email == "admin@test.com") {
+        await AppData.SaveLoginInfo('admin_uid_001', 'admin', true);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
@@ -172,9 +182,8 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         if (res.split(':')[0] == "T") {
           var sp = await SharedPreferences.getInstance();
-          sp.setString('uid', res.split(':')[1]);
-          sp.setBool('isLoggedIn', true);
-          sp.setString('role', 'teacher');
+          String uid = res.split(':')[1];
+          await AppData.SaveLoginInfo(uid, 'teacher', true);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(

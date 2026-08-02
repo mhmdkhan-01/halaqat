@@ -516,8 +516,9 @@ class _TeacherSettingsTabState extends State<TeacherSettingsTab> {
                             size: 14,
                             color: Color(0xFF94A3B8),
                           ),
-                          onTap: () {
+                          onTap: () async {
                             // Handle log out
+                            await AppData.clearLoginInfo();
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(

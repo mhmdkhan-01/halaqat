@@ -12,18 +12,36 @@ class AppData {
   static const String _keySessions = "cached_sessions";
   static const String _keyProgressLogs = "cached_progress_logs";
   static const String _keyUsers = "cached_users";
-  static final Map<String, Map<String, Map<String, String>>> _attendanceLogs =
-      {};
-  // Existing Mock Memory Data
-  static List<Map<String, dynamic>> attendanceLogs = [
-    {
-      "studentId": "std_8849204",
-      "studentName": "Ahmad Muhammad",
-      "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
-      "session": "session1",
-      "attendanceStatus": "present",
+  static const String _keyUid = "uid";
+  static const String _keyRole = "cached_role";
+  static const String _keyIsLoggedIn = "cached_IsLoggedIn";
+
+  static Map<String, Set<String>> submittedSessions = {};
+
+  static final Map<String, Map<String, Map<String, String>>> _attendanceLogs = {
+    "2026-08-01": {
+      "Session 1 (Sabaq)": {
+        "std_8849204": "Present",
+        "std_9920134": "Absent",
+        "std_1111111": "Late",
+      },
+      "Session 2 (Sabqi)": {
+        "std_8849204": "Present",
+        "std_9920134": "Present",
+        "std_1111111": "Absent",
+      },
     },
-  ];
+  };
+  // Existing Mock Memory Data
+  // static List<Map<String, dynamic>> attendanceLogs = [
+  //   {
+  //     "studentId": "std_8849204",
+  //     "studentName": "Ahmad Muhammad",
+  //     "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+  //     "session": "session1",
+  //     "attendanceStatus": "present",
+  //   },
+  // ];
 
   static List<Map<String, dynamic>> availableSessions = [
     {
@@ -372,15 +390,22 @@ class AppData {
     return logs;
   }
 
-  static int gettotalAttendanceCount(String date, String status) {
-    return attendanceLogs
-        .where(
-          (log) =>
-              log['date'] == date &&
-              log['attendanceStatus'].toString().toLowerCase() ==
-                  status.toLowerCase(),
-        )
-        .length;
+  static int getTotalAttendanceCount(String date, String status) {
+    final dayData = _attendanceLogs[date];
+    if (dayData == null) return 0;
+
+    int count = 0;
+    final targetStatus = status.toLowerCase();
+
+    dayData.forEach((sessionName, studentMap) {
+      studentMap.forEach((studentId, attendanceStatus) {
+        if (attendanceStatus.toString().toLowerCase() == targetStatus) {
+          count++;
+        }
+      });
+    });
+
+    return count;
   }
 
   static int getTotalAttendanceCountForSession(
@@ -388,15 +413,20 @@ class AppData {
     String status,
     String session,
   ) {
-    return attendanceLogs
-        .where(
-          (log) =>
-              log['date'] == date &&
-              log['attendanceStatus'].toString().toLowerCase() ==
-                  status.toLowerCase() &&
-              log['session'] == session,
-        )
-        .length;
+    int count = 0;
+    final dayData = _attendanceLogs[date];
+    if (dayData == null) return 0;
+    dayData.forEach((sessionName, studentMap) {
+      if (sessionName == session) {
+        studentMap.forEach((studentId, attendanceStatus) {
+          if (attendanceStatus.toString().toLowerCase() ==
+              status.toLowerCase()) {
+            count++;
+          }
+        });
+      }
+    });
+    return count;
   }
 
   static Map<String, dynamic> getAttendanceStatusForSession(
@@ -404,16 +434,40 @@ class AppData {
     String studentId,
     String date,
   ) {
-    return attendanceLogs
-            .where(
-              (log) =>
-                  log['studentId'] == studentId &&
-                  log['session'] == session &&
-                  log['date'] == date,
-            )
-            .map((log) => {"attendanceStatus": log["attendanceStatus"]})
-            .firstOrNull ??
-        {"attendanceStatus": "Pending"};
+    Map<String, dynamic> response = {"attendanceStatus": "Pending"};
+    final dayData = _attendanceLogs[date];
+    if (dayData == null) return {"attendanceStatus": "Pending"};
+
+    dayData.forEach((sessionName, studentMap) {
+      if (sessionName.toLowerCase() == session.toLowerCase()) {
+        final status = studentMap[studentId];
+        if (status != null) {
+          response = {"attendanceStatus": status};
+        }
+      }
+    });
+
+    return response;
+  }
+
+  static int getTotalAttendanceCountForStudent(
+    String studentId,
+    String status,
+  ) {
+    int count = 0;
+    final targetStatus = status.toLowerCase();
+
+    _attendanceLogs.forEach((date, sessions) {
+      sessions.forEach((sessionName, studentMap) {
+        final attendanceStatus = studentMap[studentId];
+        if (attendanceStatus != null &&
+            attendanceStatus.toLowerCase() == targetStatus) {
+          count++;
+        }
+      });
+    });
+
+    return count;
   }
 
   static List<Map<String, dynamic>> getHistoryLogsForStudent(String studentId) {
@@ -465,21 +519,6 @@ class AppData {
       if (index == 13 || index == 27) return "absent";
       if (index >= 16) return "unlogged";
       return "present";
-    });
-  }
-
-  static void addAttendanceLog(
-    String studentId,
-    String studentName,
-    String session,
-    String status,
-  ) {
-    attendanceLogs.add({
-      "studentId": studentId,
-      "studentName": studentName,
-      "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
-      "session": session,
-      "attendanceStatus": status,
     });
   }
 
@@ -641,5 +680,51 @@ class AppData {
     }
 
     return {'present': present, 'absent': absent, 'late': lateCount};
+  }
+
+  static Future<void> SaveLoginInfo(
+    String uid,
+    String role,
+    bool loggedIn,
+  ) async {
+    var sp = await SharedPreferences.getInstance();
+    await sp.setString(_keyUid, uid);
+    await sp.setString(_keyRole, role);
+    await sp.setBool(_keyIsLoggedIn, loggedIn);
+  }
+
+  static Future<Map<String, dynamic>> getLoginInfo() async {
+    var sp = await SharedPreferences.getInstance();
+    String? uid = sp.getString(_keyUid);
+    String? role = sp.getString(_keyRole);
+    bool? isLoggedIn = sp.getBool(_keyIsLoggedIn);
+
+    return {
+      "uid": uid ?? "",
+      "role": role ?? "",
+      "isLoggedIn": isLoggedIn ?? false,
+    };
+  }
+
+  static Future<void> clearLoginInfo() async {
+    var sp = await SharedPreferences.getInstance();
+    await sp.remove(_keyUid);
+    await sp.remove(_keyRole);
+    await sp.remove(_keyIsLoggedIn);
+  }
+
+  static void submitSessionForDate(String date, List<String> sessionNames) {
+    if (!submittedSessions.containsKey(date)) {
+      submittedSessions[date] = {};
+    }
+    submittedSessions[date]!.addAll(sessionNames);
+  }
+
+  static bool isSessionSubmitted(String date, String sessionName) {
+    return submittedSessions[date]?.contains(sessionName) ?? false;
+  }
+
+  static Set<String> getSubmittedSessionsForDate(String date) {
+    return submittedSessions[date] ?? {};
   }
 }

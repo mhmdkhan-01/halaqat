@@ -48,7 +48,10 @@ class _AttendanceTabState extends State<AttendanceTab> {
       final id = student['studentId'].toString();
       _studentAttendance.putIfAbsent(id, () => 'Present');
     }
-
+    var submittedForToday = AppData.getSubmittedSessionsForDate(
+      DateTime.now().toString().split(' ')[0],
+    );
+    _submittedSessions.addAll(submittedForToday);
     return {'sessions': _availableSessions, 'students': _students};
   }
 
@@ -102,7 +105,6 @@ class _AttendanceTabState extends State<AttendanceTab> {
                         onChanged: (checked) {
                           setDialogState(() {
                             if (checked == true) {
-                              if (isLocked) return;
                               _selectedSessions.add(sessionName);
                             } else {
                               if (_selectedSessions.length > 1) {
@@ -150,6 +152,21 @@ class _AttendanceTabState extends State<AttendanceTab> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
+              for (var session in _selectedSessions) {
+                if (_submittedSessions.contains(session)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Session "$session" is already submitted and locked.',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  Navigator.pop(context); // Close the dialog
+                  return;
+                }
+              }
+
               Navigator.pop(context);
 
               // 1. Call AppData to save log
@@ -160,9 +177,12 @@ class _AttendanceTabState extends State<AttendanceTab> {
               );
 
               if (success) {
-                setState(() {
-                  _submittedSessions.addAll(_selectedSessions);
-                });
+                AppData.submitSessionForDate(
+                  DateTime.now().toString().split(' ')[0],
+                  _selectedSessions,
+                );
+                _submittedSessions.addAll(_selectedSessions);
+                setState(() {});
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(

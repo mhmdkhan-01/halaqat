@@ -109,7 +109,11 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
             'present',
             _selectedSession!,
           );
-
+          final absentToday = AppData.getTotalAttendanceCountForSession(
+            DateFormat('yyyy-MM-dd').format(DateTime.now()),
+            'absent',
+            _selectedSession!,
+          );
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -301,15 +305,15 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                       ),
                       const SizedBox(width: 12),
                       _buildStatCard(
-                        'present_today'.tr(),
+                        'present'.tr(),
                         presentToday.toString(),
                         const Color(0xFF10B981),
                       ),
                       const SizedBox(width: 12),
                       _buildStatCard(
-                        'pending_logs'.tr(),
-                        "0",
-                        const Color(0xFFF59E0B),
+                        'absent'.tr(),
+                        absentToday.toString(),
+                        const Color(0xFFEF4444),
                       ),
                     ],
                   ),
@@ -476,6 +480,26 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                     ],
                   ),
                   onTap: () async {
+                    if (currentSessionStatus == "Pending") {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Please mark attendance for the session first.',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+                    if (currentSessionStatus == "Absent") {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Student is absent for this session.'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
                     await Navigator.push(
                       context,
                       MaterialPageRoute(

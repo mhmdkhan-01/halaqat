@@ -79,21 +79,14 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
     final currentPara = widget.student['para'] ?? "1";
 
     // Dynamic attendance count
-    final totalPresent = AppData.attendanceLogs
-        .where(
-          (a) =>
-              a['studentId'] == widget.student['studentId'] &&
-              a['attendanceStatus'] == 'present',
-        )
-        .length;
-    final totalAbsent = AppData.attendanceLogs
-        .where(
-          (a) =>
-              a['studentId'] == widget.student['studentId'] &&
-              a['attendanceStatus'] == 'absent',
-        )
-        .length;
-
+    final totalPresent = AppData.getTotalAttendanceCountForStudent(
+      widget.student['studentId'],
+      'Present',
+    );
+    final totalAbsent = AppData.getTotalAttendanceCountForStudent(
+      widget.student['studentId'],
+      'Absent',
+    );
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
