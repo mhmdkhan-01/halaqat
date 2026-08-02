@@ -4,7 +4,6 @@ import 'package:halaqat/features/admin_portal/presentation/admin_dashboard_scree
 import 'package:halaqat/features/daily_logging/presentation/teacher_main_navigation.dart';
 import 'package:halaqat/features/parent_portal/presentation/parent_dashboard.dart';
 import 'package:halaqat/features/progress_tracking/data/app_data.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 // ==================== 1. SPLASH SCREEN ====================
 class SplashScreen extends StatefulWidget {
@@ -37,7 +36,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _navigateToLogin() async {
     // Simulate initial asset loading or DB initialization
-    var sp = await SharedPreferences.getInstance();
     Map<String, dynamic> loginInfo = await AppData.getLoginInfo();
 
     bool isLoggedIn = loginInfo['isLoggedIn'] ?? false;
@@ -181,7 +179,6 @@ class _LoginScreenState extends State<LoginScreen> {
           _passwordController.text.trim(),
         );
         if (res.split(':')[0] == "T") {
-          var sp = await SharedPreferences.getInstance();
           String uid = res.split(':')[1];
           await AppData.SaveLoginInfo(uid, 'teacher', true);
           Navigator.pushReplacement(
