@@ -174,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else if (email == "teacher" || email == "teacher@test.com") {
         String res = AppData.validateLoginUser(
-          "03111111111",
+          _emailController.text.trim(),
           _passwordController.text.trim(),
         );
         if (res.split(':')[0] == "T") {
