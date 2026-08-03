@@ -172,7 +172,12 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
         );
-      } else if (email == "teacher" || email == "teacher@test.com") {
+      } else if (email == "parent" || email == "parent@test.com") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const ParentDashboard()),
+        );
+      } else {
         String res = AppData.validateLoginUser(
           _emailController.text.trim(),
           _passwordController.text.trim(),
@@ -194,18 +199,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         }
-      } else if (email == "parent" || email == "parent@test.com") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const ParentDashboard()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("invalid_credentials_error".tr()),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
       }
     }
   }
@@ -368,17 +361,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 30),
 
                 // Quick Login Helper Cards (Great for testing roles)
-                Center(
-                  child: Text(
-                    "testing_hint".tr(),
-                    style: const TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
+                // Center(
+                //   child: Text(
+                //     "testing_hint".tr(),
+                //     style: const TextStyle(
+                //       color: Color(0xFF94A3B8),
+                //       fontSize: 12,
+                //       fontWeight: FontWeight.bold,
+                //     ),
+                //   ),
+                // ),
+                // const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [

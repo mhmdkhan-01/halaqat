@@ -276,14 +276,15 @@ class AppData {
             .toList();
       }
     }
-
+    debugPrint(
+      "Fetching students for teacherId: $teacherId from AppData\nCurrent students: ${students}",
+    );
     // ONLINE FLOW: (Future Firebase query will go here)
     final freshData = students
         .where((student) => student["teacherId"] == teacherId)
         .toList();
 
     // Cache updated list locally
-    await _saveToPrefs(_keyStudents, students);
     return freshData;
   }
 
@@ -640,9 +641,11 @@ class AppData {
         .where((user) => user['phoneNumber'] == uname)
         .firstOrNull;
     if (u == null) {
+      print("User Not found");
       return "E:No User Found";
     }
     if (password != u['password']) {
+      print("Incorrect Password");
       return "E:Incorrect Password";
     }
     return "T:${u['uid']}";

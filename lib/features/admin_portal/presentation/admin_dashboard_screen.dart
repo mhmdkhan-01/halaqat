@@ -584,7 +584,8 @@ class AdminLogoutScreen extends StatelessWidget {
       ),
       body: Center(
         child: ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
+            await AppData.clearLoginInfo(); // Clear login info from local storage
             // Implement logout logic here
             Navigator.pushReplacement(
               context,

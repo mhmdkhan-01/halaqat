@@ -69,7 +69,7 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
     // Extract metrics dynamically
     final latestLog = _historyLogs.firstWhere(
       (log) => log['sabaq'] != null,
-      orElse: () => {},
+      orElse: () => <String, String?>{},
     );
 
     final currentSura = latestLog.isNotEmpty && latestLog['sabaq'] != null

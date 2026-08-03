@@ -31,11 +31,12 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
     final sp = await SharedPreferences.getInstance();
     final String? uid = sp.getString('uid');
 
+    debugPrint("Teache r UID: $uid");
     List<Map<String, dynamic>> students = [];
     if (uid != null && uid.isNotEmpty) {
       students = await AppData.getTeacherStudents(uid);
     }
-
+    debugPrint("Loaded ${students.length} students for teacher $uid");
     // Determine initial active session based on current time
     final runningSession = _determineCurrentlyRunningSession(sessions);
 

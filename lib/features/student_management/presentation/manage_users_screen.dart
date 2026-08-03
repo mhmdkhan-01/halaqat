@@ -387,13 +387,15 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                         String parentId = parentIndex != -1
                             ? _parentsIds[parentIndex]
                             : "Unassigned";
-
+                        debugPrint(
+                          "Assigning Student: ${student['name']} to Teacher ID: $teacherId and Parent ID: $parentId",
+                        );
                         setState(() {
                           AppData.assignRelations(
                             currentParent ?? "Unassigned",
                             currentTeacher ?? "Unassigned",
-                            teacherId,
                             parentId,
+                            teacherId,
                             index,
                           );
                           _students[index]['parent'] =
