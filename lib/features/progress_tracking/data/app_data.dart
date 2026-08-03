@@ -12,6 +12,7 @@ class AppData {
   static const String _keySessions = "cached_sessions";
   static const String _keyProgressLogs = "cached_progress_logs";
   static const String _keyUsers = "cached_users";
+  static const String _keyAttendanceLogs = "cached_attendance_logs";
   static const String _keyUid = "uid";
   static const String _keyRole = "cached_role";
   static const String _keyIsLoggedIn = "cached_IsLoggedIn";
@@ -21,18 +22,18 @@ class AppData {
   static Map<String, Set<String>> submittedProgressLogs = {};
 
   static final Map<String, Map<String, Map<String, String>>> _attendanceLogs = {
-    "2026-08-01": {
-      "Session 1 (Sabaq)": {
-        "std_8849204": "Present",
-        "std_9920134": "Absent",
-        "std_1111111": "Late",
-      },
-      "Session 2 (Sabqi)": {
-        "std_8849204": "Present",
-        "std_9920134": "Present",
-        "std_1111111": "Absent",
-      },
-    },
+    // "2026-08-01": {
+    //   "Session 1 (Sabaq)": {
+    //     "std_8849204": "Present",
+    //     "std_9920134": "Absent",
+    //     "std_1111111": "Late",
+    //   },
+    //   "Session 2 (Sabqi)": {
+    //     "std_8849204": "Present",
+    //     "std_9920134": "Present",
+    //     "std_1111111": "Absent",
+    //   },
+    // },
   };
   // Existing Mock Memory Data
   // static List<Map<String, dynamic>> attendanceLogs = [
@@ -46,78 +47,78 @@ class AppData {
   // ];
 
   static List<Map<String, dynamic>> availableSessions = [
-    {
-      "id": "1",
-      "name": "Session 1 (Sabaq)",
-      "startTime": const TimeOfDay(hour: 6, minute: 0),
-      "endTime": const TimeOfDay(hour: 9, minute: 0),
-    },
-    {
-      "id": "2",
-      "name": "Session 2 (Sabqi)",
-      "startTime": const TimeOfDay(hour: 10, minute: 0),
-      "endTime": const TimeOfDay(hour: 13, minute: 0),
-    },
-    {
-      "id": "3",
-      "name": "Session 3 (Manzil)",
-      "startTime": const TimeOfDay(hour: 14, minute: 0),
-      "endTime": const TimeOfDay(hour: 17, minute: 0),
-    },
+    // {
+    //   "id": "1",
+    //   "name": "Session 1 (Sabaq)",
+    //   "startTime": const TimeOfDay(hour: 6, minute: 0),
+    //   "endTime": const TimeOfDay(hour: 9, minute: 0),
+    // },
+    // {
+    //   "id": "2",
+    //   "name": "Session 2 (Sabqi)",
+    //   "startTime": const TimeOfDay(hour: 10, minute: 0),
+    //   "endTime": const TimeOfDay(hour: 13, minute: 0),
+    // },
+    // {
+    //   "id": "3",
+    //   "name": "Session 3 (Manzil)",
+    //   "startTime": const TimeOfDay(hour: 14, minute: 0),
+    //   "endTime": const TimeOfDay(hour: 17, minute: 0),
+    // },
   ];
 
   static List<Map<String, dynamic>> ProgressLogs = [
-    {
-      "logId": "log_5529104",
-      "studentId": "std_8849204",
-      "studentName": "Ahmad Muhammad",
-      "loggedByTeacherId": "teacher_uid_101",
-      "date": "2026-07-16",
-      "attendanceStatus": "present",
-      "sabaq": {
-        "surah": "Al-Baqarah",
-        "para": 2,
-        "startAyah": 142,
-        "endAyah": 150,
-        "lines": 17,
-      },
-      "sabqi": "para 1 page 2 to 5",
-      "manzil": "para 2",
-      "grade": ["Excellent", "Good", "Needs Practice"],
-    },
-    {
-      "logId": "log_5529101",
-      "studentId": "std_8849204",
-      "studentName": "Ahmad Muhammad",
-      "loggedByTeacherId": "teacher_uid_101",
-      "date": "2026-07-14",
-      "attendanceStatus": "absent",
-      "sabaq": null,
-      "sabqi": null,
-      "manzil": null,
-      "grade": ["N/A", "N/A", "N/A"],
-    },
+    // {
+    //   "logId": "log_5529104",
+    //   "studentId": "std_8849204",
+    //   "studentName": "Ahmad Muhammad",
+    //   "loggedByTeacherId": "teacher_uid_101",
+    //   "date": "2026-07-16",
+    //   "attendanceStatus": "present",
+    //   "sabaq": {
+    //     "surah": "Al-Baqarah",
+    //     "para": 2,
+    //     "startAyah": 142,
+    //     "endAyah": 150,
+    //     "lines": 17,
+    //   },
+    //   "sabqi": "para 1 page 2 to 5",
+    //   "manzil": "para 2",
+    //   "grade": ["Excellent", "Good", "Needs Practice"],
+    // },
+    // {
+    //   "logId": "log_5529101",
+    //   "studentId": "std_8849204",
+    //   "studentName": "Ahmad Muhammad",
+    //   "loggedByTeacherId": "teacher_uid_101",
+    //   "date": "2026-07-14",
+    //   "attendanceStatus": "absent",
+    //   "sabaq": null,
+    //   "sabqi": null,
+    //   "manzil": null,
+    //   "grade": ["N/A", "N/A", "N/A"],
+    // },
   ];
 
   static List<Map<String, dynamic>> students = [
-    {
-      "studentId": "std_8849204",
-      "name": "Ahmad Muhammad",
-      "teacherId": "teacher_uid_101",
-      "parentId": "parent_uid_201",
-      "assignedTeacherName": "Qari Sulaiman",
-      "assignedParentName": "Muhammad Bilal",
-      "createdAt": "2026-07-15T19:23:52Z",
-    },
-    {
-      "studentId": "std_9920134",
-      "name": "Hamza Yousaf",
-      "teacherId": "teacher_uid_101",
-      "parentId": "parent_uid_202",
-      "assignedTeacherName": "Qari Sulaiman",
-      "assignedParentName": "Yasir Khan",
-      "createdAt": "2026-07-16T10:00:00Z",
-    },
+    // {
+    //   "studentId": "std_8849204",
+    //   "name": "Ahmad Muhammad",
+    //   "teacherId": "teacher_uid_101",
+    //   "parentId": "parent_uid_201",
+    //   "assignedTeacherName": "Qari Sulaiman",
+    //   "assignedParentName": "Muhammad Bilal",
+    //   "createdAt": "2026-07-15T19:23:52Z",
+    // },
+    // {
+    //   "studentId": "std_9920134",
+    //   "name": "Hamza Yousaf",
+    //   "teacherId": "teacher_uid_101",
+    //   "parentId": "parent_uid_202",
+    //   "assignedTeacherName": "Qari Sulaiman",
+    //   "assignedParentName": "Yasir Khan",
+    //   "createdAt": "2026-07-16T10:00:00Z",
+    // },
   ];
 
   static List<Map<String, dynamic>> users = [
@@ -129,38 +130,38 @@ class AppData {
       "password": "password",
       "createdAt": "2026-05-01T10:00:00Z",
     },
-    {
-      "uid": "teacher_uid_101",
-      "name": "Qari Sulaiman",
-      "role": "teacher",
-      "phoneNumber": "03111111111",
-      "password": "password",
-      "createdAt": "2026-05-01T10:15:00Z",
-    },
-    {
-      "uid": "teacher_uid_102",
-      "name": "Qari Tariq",
-      "role": "teacher",
-      "phoneNumber": "03002222222",
-      "password": "password",
-      "createdAt": "2026-05-02T11:00:00Z",
-    },
-    {
-      "uid": "parent_uid_201",
-      "name": "Muhammad Bilal",
-      "role": "parent",
-      "phoneNumber": "03001234567",
-      "password": "123456",
-      "createdAt": "2026-05-03T09:30:00Z",
-    },
-    {
-      "uid": "parent_uid_202",
-      "name": "Yasir Khan",
-      "role": "parent",
-      "phoneNumber": "03007654321",
-      "password": "123456",
-      "createdAt": "2026-05-03T09:45:00Z",
-    },
+    // {
+    //   "uid": "teacher_uid_101",
+    //   "name": "Qari Sulaiman",
+    //   "role": "teacher",
+    //   "phoneNumber": "03111111111",
+    //   "password": "password",
+    //   "createdAt": "2026-05-01T10:15:00Z",
+    // },
+    // {
+    //   "uid": "teacher_uid_102",
+    //   "name": "Qari Tariq",
+    //   "role": "teacher",
+    //   "phoneNumber": "03002222222",
+    //   "password": "password",
+    //   "createdAt": "2026-05-02T11:00:00Z",
+    // },
+    // {
+    //   "uid": "parent_uid_201",
+    //   "name": "Muhammad Bilal",
+    //   "role": "parent",
+    //   "phoneNumber": "03001234567",
+    //   "password": "123456",
+    //   "createdAt": "2026-05-03T09:30:00Z",
+    // },
+    // {
+    //   "uid": "parent_uid_202",
+    //   "name": "Yasir Khan",
+    //   "role": "parent",
+    //   "phoneNumber": "03007654321",
+    //   "password": "123456",
+    //   "createdAt": "2026-05-03T09:45:00Z",
+    // },
   ];
 
   // ==========================================
@@ -189,6 +190,76 @@ class AppData {
     await prefs.remove(_keySessions);
     await prefs.remove(_keyProgressLogs);
     await prefs.remove(_keyUsers);
+    await prefs.remove(_keyAttendanceLogs);
+  }
+
+  //Load data from SharedPreferences on app start
+  static Future<void> loadCachedData() async {
+    final cachedStudents = await _getFromPrefs(_keyStudents);
+    if (cachedStudents != null) {
+      students = cachedStudents;
+    }
+
+    final cachedSessions = await _getFromPrefs(_keySessions);
+    if (cachedSessions != null) {
+      availableSessions = cachedSessions.map((s) {
+        return {
+          "id": s["id"],
+          "name": s["name"],
+          "startTime": TimeOfDay(
+            hour: s["startHour"] ?? 8,
+            minute: s["startMinute"] ?? 0,
+          ),
+          "endTime": TimeOfDay(
+            hour: s["endHour"] ?? 10,
+            minute: s["endMinute"] ?? 0,
+          ),
+        };
+      }).toList();
+    }
+
+    final cachedProgressLogs = await _getFromPrefs(_keyProgressLogs);
+    if (cachedProgressLogs != null) {
+      ProgressLogs = cachedProgressLogs;
+    }
+
+    final cachedUsers = await _getFromPrefs(_keyUsers);
+    if (cachedUsers != null) {
+      users = cachedUsers;
+    }
+    await loadAttendanceLogs();
+  }
+
+  static Future<void> loadAttendanceLogs() async {
+    // 1. Get raw string or object from prefs
+    final dynamic rawData = await _getFromPrefs(_keyAttendanceLogs);
+
+    // 2. If it's stored as a JSON string, decode it first
+    final Map<String, dynamic>? cachedAttendanceLogs = (rawData is String)
+        ? jsonDecode(rawData) as Map<String, dynamic>?
+        : rawData as Map<String, dynamic>?;
+
+    if (cachedAttendanceLogs != null) {
+      _attendanceLogs.clear();
+
+      cachedAttendanceLogs.forEach((date, sessions) {
+        if (sessions is Map) {
+          final Map<String, Map<String, String>> parsedSessions = {};
+
+          sessions.forEach((sessionName, students) {
+            if (students is Map) {
+              // Safely map student IDs to statuses
+              parsedSessions[sessionName.toString()] = students.map(
+                (studentId, status) =>
+                    MapEntry(studentId.toString(), status.toString()),
+              );
+            }
+          });
+
+          _attendanceLogs[date.toString()] = parsedSessions;
+        }
+      });
+    }
   }
 
   // ==========================================
@@ -655,6 +726,7 @@ class AppData {
           studentAttendance,
         );
       }
+      await _saveToPrefs(_keyAttendanceLogs, _attendanceLogs);
 
       // Debug log to verify structure in console
       print("Saved Logs for $dateKey: ${_attendanceLogs[dateKey]}");

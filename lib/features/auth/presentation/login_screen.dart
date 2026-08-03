@@ -37,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateToLogin() async {
     // Simulate initial asset loading or DB initialization
     Map<String, dynamic> loginInfo = await AppData.getLoginInfo();
-
+    await AppData.loadCachedData();
     bool isLoggedIn = loginInfo['isLoggedIn'] ?? false;
     String role = loginInfo['role'] ?? '';
     if (isLoggedIn && role == 'teacher') {

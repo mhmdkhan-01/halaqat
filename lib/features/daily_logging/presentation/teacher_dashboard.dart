@@ -451,7 +451,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                     padding: EdgeInsets.only(top: 4.0),
                     //Fix here
                     child: Text(
-                      student['assignedParentName'] ?? "-",
+                      "S/O ${student['assignedParentName'] ?? '-'}",
                       style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                     ),
                   ),
