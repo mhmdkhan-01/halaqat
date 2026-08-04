@@ -68,36 +68,36 @@ class AppData {
   ];
 
   static List<Map<String, dynamic>> ProgressLogs = [
-    // {
-    //   "logId": "log_5529104",
-    //   "studentId": "std_8849204",
-    //   "studentName": "Ahmad Muhammad",
-    //   "loggedByTeacherId": "teacher_uid_101",
-    //   "date": "2026-07-16",
-    //   "attendanceStatus": "present",
-    //   "sabaq": {
-    //     "surah": "Al-Baqarah",
-    //     "para": 2,
-    //     "startAyah": 142,
-    //     "endAyah": 150,
-    //     "lines": 17,
-    //   },
-    //   "sabqi": "para 1 page 2 to 5",
-    //   "manzil": "para 2",
-    //   "grade": ["Excellent", "Good", "Needs Practice"],
-    // },
-    // {
-    //   "logId": "log_5529101",
-    //   "studentId": "std_8849204",
-    //   "studentName": "Ahmad Muhammad",
-    //   "loggedByTeacherId": "teacher_uid_101",
-    //   "date": "2026-07-14",
-    //   "attendanceStatus": "absent",
-    //   "sabaq": null,
-    //   "sabqi": null,
-    //   "manzil": null,
-    //   "grade": ["N/A", "N/A", "N/A"],
-    // },
+    {
+      "logId": "log_5529104",
+      "studentId": "std_8849204",
+      "studentName": "Ahmad Muhammad",
+      "loggedByTeacherId": "teacher_uid_101",
+      "date": "2026-07-16",
+      "attendanceStatus": "present",
+      "sabaq": {
+        "surah": "Al-Baqarah",
+        "para": 2,
+        "startAyah": 142,
+        "endAyah": 150,
+        "lines": 17,
+      },
+      "sabqi": "para 1 page 2 to 5",
+      "manzil": "para 2",
+      "grade": ["Excellent", "Good", "Needs Practice"],
+    },
+    {
+      "logId": "log_5529101",
+      "studentId": "std_8849204",
+      "studentName": "Ahmad Muhammad",
+      "loggedByTeacherId": "teacher_uid_101",
+      "date": "2026-07-14",
+      "attendanceStatus": "absent",
+      "sabaq": null,
+      "sabqi": null,
+      "manzil": null,
+      "grade": ["N/A", "N/A", "N/A"],
+    },
   ];
 
   static List<Map<String, dynamic>> students = [

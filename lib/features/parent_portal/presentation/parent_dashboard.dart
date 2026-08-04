@@ -26,6 +26,9 @@ class _ParentDashboardState extends State<ParentDashboard> {
     "sabaq": "Para 15, Surah Al-Kahf (Ayat 1-20)",
     "sabqi": "Para 14 (Full)",
     "manzil": "Para 5 (Quarter 1)",
+    "sabaqgrade": "Excellent",
+    "sabqigrade": "Good",
+    "manzilgrade": "Needs Practice",
     "teacher_note": "Masha'Allah, excellent tajweed and focus today!",
   };
 
@@ -183,30 +186,15 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      child['name'],
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : const Color(0xFF1E293B),
-                                      ),
-                                    ),
-                                    Text(
-                                      child['grade'],
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: isSelected
-                                            ? Colors.white70
-                                            : const Color(0xFF64748B),
-                                      ),
-                                    ),
-                                  ],
+                                Text(
+                                  child['name'],
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : const Color(0xFF1E293B),
+                                  ),
                                 ),
                               ],
                             ),
@@ -303,52 +291,77 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                   ),
                                 ],
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF10B981,
-                                  ).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  _todayReport['attendance']
-                                      .toString()
-                                      .toLowerCase()
-                                      .tr(),
+                              if (_todayReport['attendance'] == null)
+                                Text(
+                                  'Pending'.tr(),
                                   style: const TextStyle(
-                                    color: Color(0xFF10B981),
+                                    color: Color(0xFF64748B),
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),
+                                )
+                              else
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF10B981,
+                                    ).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    _todayReport['attendance']
+                                        .toString()
+                                        .toLowerCase()
+                                        .tr(),
+                                    style: const TextStyle(
+                                      color: Color(0xFF10B981),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                           const Divider(height: 30, color: Color(0xFFF1F5F9)),
-
-                          // Progress Indicators
-                          _buildProgressRow(
-                            'sabaq'.tr(),
-                            _todayReport['sabaq'],
-                            Icons.chrome_reader_mode_outlined,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildProgressRow(
-                            'sabqi'.tr(),
-                            _todayReport['sabqi'],
-                            Icons.history_edu_outlined,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildProgressRow(
-                            'manzil'.tr(),
-                            _todayReport['manzil'],
-                            Icons.star_border_rounded,
-                          ),
-
+                          if (_todayReport['attendance'] != null) ...[
+                            // Progress Indicators
+                            //change here
+                            _buildProgressRow(
+                              'sabaq'.tr(),
+                              _todayReport['sabaq'],
+                              _todayReport['sabaqgrade'],
+                              Icons.chrome_reader_mode_outlined,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildProgressRow(
+                              'sabqi'.tr(),
+                              _todayReport['sabqi'],
+                              _todayReport['sabqigrade'],
+                              Icons.history_edu_outlined,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildProgressRow(
+                              'manzil'.tr(),
+                              _todayReport['manzil'],
+                              _todayReport['manzilgrade'],
+                              Icons.star_border_rounded,
+                            ),
+                          ] else ...[
+                            Center(
+                              child: Text(
+                                'Progress Data is not logged yet.',
+                                style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 13,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          ],
                           // Optional Teacher Note
                           if (_todayReport['teacher_note'] != null) ...[
                             const Divider(height: 30, color: Color(0xFFF1F5F9)),
@@ -554,7 +567,12 @@ class _ParentDashboardState extends State<ParentDashboard> {
   }
 
   // Row builder helper for Today's Card
-  Widget _buildProgressRow(String label, String value, IconData icon) {
+  Widget _buildProgressRow(
+    String label,
+    String value,
+    String grade,
+    IconData icon,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -577,11 +595,50 @@ class _ParentDashboardState extends State<ParentDashboard> {
                 value,
                 style: const TextStyle(
                   color: Color(0xFF1E293B),
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                   fontSize: 14,
                 ),
               ),
             ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: label == "sabaq".tr()
+                ? (grade == "Excellent")
+                      ? Color(0xFF10B981).withOpacity(0.1)
+                      : (grade == "Good")
+                      ? Color.fromARGB(255, 16, 86, 185).withOpacity(0.1)
+                      : Color(0xFFEF4444).withOpacity(0.1)
+                : label == "sabqi".tr()
+                ? (grade == "Excellent")
+                      ? Color(0xFF10B981).withOpacity(0.1)
+                      : (grade == "Good")
+                      ? Color.fromARGB(255, 16, 86, 185).withOpacity(0.1)
+                      : Color(0xFFEF4444).withOpacity(0.1)
+                : (grade == "Excellent")
+                ? Color(0xFF10B981).withOpacity(0.1)
+                : (grade == "Good")
+                ? Color.fromARGB(255, 16, 86, 185).withOpacity(0.1)
+                : Color(0xFFEF4444).withOpacity(0.1),
+            border: Border.all(
+              color: (grade == "Excellent")
+                  ? Color(0xFF10B981)
+                  : (grade == "Good")
+                  ? Color.fromARGB(255, 16, 86, 185)
+                  : Color(0xFFEF4444),
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            grade,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
           ),
         ),
       ],

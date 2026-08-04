@@ -391,22 +391,22 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
                 children: [
                   _buildProgressComponentRow(
                     "Sabaq (New)",
-                    "${log['sabaq']['surah']} (Ayah ${log['sabaq']['startAyah']}-${log['sabaq']['endAyah']})",
-                    log['sabaq']['grade'],
+                    "${log['sabaq']['surah']} })",
+                    "Grade",
                     Colors.teal,
                   ),
                   const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Sabqi (Recent)",
-                    "Para ${log['sabqi']['para']} (Pgs: ${log['sabqi']['pages']})",
-                    log['sabqi']['grade'],
+                    "Para ${log['sabqi']}",
+                    "Grade",
                     Colors.indigo,
                   ),
                   const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Manzil (Revision)",
-                    "Para ${log['manzil']['para']}",
-                    log['manzil']['grade'],
+                    "Para ${log['manzil']}",
+                    "Grade",
                     Colors.amber[800]!,
                   ),
                 ],
