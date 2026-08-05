@@ -282,6 +282,8 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                               ParentReportsScreen(
                                                 childName:
                                                     selectedChild['name'],
+                                                studentId:
+                                                    selectedChild['studentId'],
                                               ),
                                         ),
                                       );

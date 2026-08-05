@@ -4,7 +4,12 @@ import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 
 class ParentReportsScreen extends StatefulWidget {
   final String childName;
-  const ParentReportsScreen({super.key, required this.childName});
+  final String studentId;
+  const ParentReportsScreen({
+    super.key,
+    required this.childName,
+    required this.studentId,
+  });
 
   @override
   State<ParentReportsScreen> createState() => _ParentReportsScreenState();
@@ -187,6 +192,8 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
   }
 
   Widget _buildAttendanceSummaryCard() {
+    double rate = _analytics['attendanceRate'] as double;
+    debugPrint("Rate $rate");
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -203,7 +210,7 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
                 width: 74,
                 height: 74,
                 child: CircularProgressIndicator(
-                  value: 0.92,
+                  value: rate,
                   strokeWidth: 7,
                   backgroundColor: const Color(0xFFE2E8F0),
                   valueColor: const AlwaysStoppedAnimation<Color>(
@@ -215,7 +222,7 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _analytics['attendanceRate'],
+                    "${(rate * 100).floor()}%",
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -391,22 +398,22 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
                 children: [
                   _buildProgressComponentRow(
                     "Sabaq (New)",
-                    "${log['sabaq']['surah']} })",
-                    "Grade",
+                    "${log['sabaq']['surah']} - Lines: ${log['sabaq']['lines']}",
+                    "${log['grade'][0]}",
                     Colors.teal,
                   ),
                   const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Sabqi (Recent)",
-                    "Para ${log['sabqi']}",
-                    "Grade",
+                    "${log['sabqi']}",
+                    "${log['grade'][1]}",
                     Colors.indigo,
                   ),
                   const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Manzil (Revision)",
-                    "Para ${log['manzil']}",
-                    "Grade",
+                    "${log['manzil']}",
+                    "${log['grade'][2]}",
                     Colors.amber[800]!,
                   ),
                 ],

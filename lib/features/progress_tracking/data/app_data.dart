@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_launcher_icons/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppData {
@@ -22,18 +23,18 @@ class AppData {
   static Map<String, Set<String>> submittedProgressLogs = {};
 
   static final Map<String, Map<String, Map<String, String>>> _attendanceLogs = {
-    // "2026-08-01": {
-    //   "Session 1 (Sabaq)": {
-    //     "std_8849204": "Present",
-    //     "std_9920134": "Absent",
-    //     "std_1111111": "Late",
-    //   },
-    //   "Session 2 (Sabqi)": {
-    //     "std_8849204": "Present",
-    //     "std_9920134": "Present",
-    //     "std_1111111": "Absent",
-    //   },
-    // },
+    "2026-08-01": {
+      "Session 1 (Sabaq)": {
+        "std_8849204": "Present",
+        "std_9920134": "Absent",
+        "std_1111111": "Late",
+      },
+      "Session 2 (Sabqi)": {
+        "std_8849204": "Present",
+        "std_9920134": "Present",
+        "std_1111111": "Absent",
+      },
+    },
   };
   // Existing Mock Memory Data
   // static List<Map<String, dynamic>> attendanceLogs = [
@@ -227,7 +228,7 @@ class AppData {
     if (cachedUsers != null) {
       users = cachedUsers;
     }
-    await loadAttendanceLogs();
+    // await loadAttendanceLogs();
   }
 
   static Future<void> loadAttendanceLogs() async {
@@ -479,6 +480,7 @@ class AppData {
               "sabaq": null,
               "sabqi": null,
               "manzil": null,
+              "grade": [],
             },
           ]
         : List<Map<String, dynamic>>.from(ProgressLogs);
@@ -579,6 +581,7 @@ class AppData {
             "sabaq": log["sabaq"],
             "sabqi": log["sabqi"],
             "manzil": log["manzil"],
+            "grade": log["grade"],
           },
         )
         .toList();
@@ -603,22 +606,94 @@ class AppData {
   }
 
   static Map<String, dynamic> getStudentAnalytics(String studentId) {
+    int tnp = 0;
+    final studentLogs = ProgressLogs.where(
+      (log) => log['studentId'] == studentId,
+    ).toList();
+    studentLogs.forEach((log) {
+      if (log['sabaq'] != null && log['sabaq']['lines'] != null) {
+        tnp += log['sabaq']['lines'] as int;
+      }
+    });
+    double totalNewPages = tnp / 16;
+    double hifzProgressPercent = 0;
+    double totalParas = 30;
+    studentLogs.forEach((log) {
+      if (log['sabaq'] != null && log['sabaq']['para'] != null) {
+        hifzProgressPercent += (log['sabaq']['para'] as int) / totalParas;
+      }
+    });
+    int totalClasses = _attendanceLogs.length;
+    debugPrint("Total classes = $_attendanceLogs");
+    int totalPresents = ProgressLogs.where(
+      (log) =>
+          log['studentId'] == studentId &&
+          log['attendanceStatus'].toString().toLowerCase() == 'present',
+    ).length;
+    int totalAbsents = (totalPresents == 0)
+        ? totalClasses
+        : totalClasses - totalPresents;
+    totalAbsents = totalAbsents < 0 ? 0 : totalAbsents;
+
+    double attendanceRate = (totalClasses > 0)
+        ? totalPresents / totalClasses
+        : 0.0;
     return {
-      "totalNewPages": 14,
-      "hifzProgressPercent": 0.45,
-      "attendanceRate": "92%",
-      "totalClasses": 120,
-      "totalPresents": 110,
-      "totalAbsents": 10,
+      "totalNewPages": totalNewPages.floor(),
+      "hifzProgressPercent": hifzProgressPercent,
+      "attendanceRate": attendanceRate,
+      "totalClasses": totalClasses,
+      "totalPresents": totalPresents,
+      "totalAbsents": totalAbsents,
     };
   }
 
-  static List<String> getMonthlyCalendarAttendance(String studentId) {
-    return List.generate(30, (index) {
-      if (index == 13 || index == 27) return "absent";
-      if (index >= 16) return "unlogged";
-      return "present";
+  static int getAttendanceForDay(String studentId, String date, String status) {
+    final dayData = _attendanceLogs[date];
+    if (dayData == null) return 0;
+
+    int count = 0;
+    dayData.forEach((sessionName, studentMap) {
+      if (studentMap.containsKey(studentId)) {
+        studentMap.forEach((id, status) {
+          if (id == studentId && status.toLowerCase() == status.toLowerCase()) {
+            count++;
+          }
+        });
+      }
     });
+
+    return count;
+  }
+
+  static List<String> getMonthlyCalendarAttendance(String studentId) {
+    List<String> statuses = List.generate(30, (a) => "unlogged");
+    _attendanceLogs.forEach((date, daydata) {
+      String dstatus = "unlogged";
+      bool check = true;
+      daydata.forEach((session, studentMap) {
+        if (studentMap.containsKey(studentId)) {
+          studentMap.forEach((id, status) {
+            if (id == studentId && status.toLowerCase() == "present") {
+              dstatus = "present";
+              check = false;
+            } else {
+              if (check) {
+                if (id == studentId && status.toLowerCase() == "absent") {
+                  dstatus = "absent";
+                }
+              }
+            }
+          });
+        }
+      });
+      String ld = date.split('-').last;
+      int? d = int.tryParse(ld);
+      debugPrint("D id $d");
+      debugPrint("Status is $dstatus");
+      if (d != null) statuses[(d - 1)] = dstatus;
+    });
+    return statuses;
   }
 
   static List<String> getAvailableSessionsNames() {
@@ -668,11 +743,9 @@ class AppData {
         .where((user) => user['phoneNumber'] == uname)
         .firstOrNull;
     if (u == null) {
-      print("User Not found");
       return {"status": "error", "message": "No User Found"};
     }
     if (password != u['password']) {
-      print("Incorrect Password");
       return {"status": "error", "message": "Incorrect Password"};
     }
 
