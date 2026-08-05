@@ -443,22 +443,22 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
                 _buildRemarksSelector(2),
                 const SizedBox(height: 20),
 
-                // 5. Remarks Label
-                // Text(
-                //   'remarks'.tr(),
-                //   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                //     fontWeight: FontWeight.bold,
-                //   ),
-                // ),
-                // const SizedBox(height: 8),
-                // TextFormField(
-                //   controller: _remarksController,
-                //   maxLines: 3,
-                //   decoration: InputDecoration(
-                //     hintText: 'remarks_hint'.tr(),
-                //     border: const OutlineInputBorder(),
-                //   ),
-                // ),
+                //5. Remarks Label
+                Text(
+                  'remarks'.tr(),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _remarksController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'remarks_hint'.tr(),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
                 const SizedBox(height: 30),
 
                 // 6. Submit Button
@@ -661,6 +661,7 @@ class _DailyEntryScreenState extends State<DailyEntryScreen> {
                   _sabqiController.text.trim(),
                   _manzilController.text.trim(),
                   remarks,
+                  _remarksController.text.trim(),
                 );
 
                 AppData.submitProgressLogForDate(

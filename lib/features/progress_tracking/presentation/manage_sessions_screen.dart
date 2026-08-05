@@ -143,7 +143,7 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -166,6 +166,7 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 6.0),
+          //fix this as it is overflowing.
           child: Row(
             children: [
               const Icon(Icons.schedule, size: 14, color: Color(0xFF64748B)),
@@ -175,7 +176,7 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
                 style: const TextStyle(
                   color: Color(0xFF64748B),
                   fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                  fontSize: 10,
                 ),
               ),
             ],

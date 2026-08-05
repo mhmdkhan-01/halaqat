@@ -288,6 +288,29 @@ class AppData {
     return freshData;
   }
 
+  static Future<List<Map<String, dynamic>>> getParentChildren(
+    String parentId,
+  ) async {
+    if (isOffline) {
+      final cached = await _getFromPrefs(_keyStudents);
+      if (cached != null) {
+        return cached
+            .where((student) => student["parentId"] == parentId)
+            .toList();
+      }
+    }
+    debugPrint(
+      "Fetching children for parentId: $parentId from AppData\nCurrent students: ${students}",
+    );
+    // ONLINE FLOW: (Future Firebase query will go here)
+    final freshData = students
+        .where((student) => student["parentId"] == parentId)
+        .toList();
+
+    // Cache updated list locally
+    return freshData;
+  }
+
   static Future<String> getUsersNameById(String uid) async {
     var u = users.where((user) => user["uid"] == uid).firstOrNull;
     if (u == null) {
@@ -383,7 +406,9 @@ class AppData {
   }
 
   static int getTotalStudentsCount() => getStudents().length;
-  static int getTotalTeachersCount() => getUserNamesByRole('teacher').length;
+  static int getTotalTeachersCount() {
+    return users.where((user) => user['role'] == 'teacher').length;
+  }
 
   static Map<String, List<String>> getUserNamesByRole(String role) {
     final filteredUsers = getUsers()
@@ -621,6 +646,7 @@ class AppData {
     String sabqi,
     String manzil,
     List<String> remarks,
+    String teacherNote,
   ) async {
     ProgressLogs.add({
       "logId": DateTime.now().millisecondsSinceEpoch.toString(),
@@ -632,23 +658,25 @@ class AppData {
       "sabqi": sabqi,
       "manzil": manzil,
       "grade": remarks,
+      "teacherNote": teacherNote,
     });
     _saveToPrefs(_keyProgressLogs, ProgressLogs);
   }
 
-  static String validateLoginUser(String uname, String password) {
+  static Map<String, dynamic> validateLoginUser(String uname, String password) {
     Map<String, dynamic>? u = users
         .where((user) => user['phoneNumber'] == uname)
         .firstOrNull;
     if (u == null) {
       print("User Not found");
-      return "E:No User Found";
+      return {"status": "error", "message": "No User Found"};
     }
     if (password != u['password']) {
       print("Incorrect Password");
-      return "E:Incorrect Password";
+      return {"status": "error", "message": "Incorrect Password"};
     }
-    return "T:${u['uid']}";
+
+    return {"status": "success", "userId": u['uid'], "role": u['role']};
   }
 
   static void addSession(Map<String, dynamic> session) {
@@ -818,5 +846,52 @@ class AppData {
 
   static Set<String> getSubmittedProgressLogsForDate(String date) {
     return submittedProgressLogs[date] ?? {};
+  }
+
+  static Future<List<Map<String, dynamic>>> getChildrenForParent(
+    String parentId,
+  ) async {
+    return students
+        .where((student) => student['parentId'] == parentId)
+        .toList();
+  }
+
+  static Future<Map<String, dynamic>> getTodayReport(String studentId) async {
+    //"attendance": "Present",
+    // "sabaq": "Para 15, Surah Al-Kahf (Ayat 1-20)",
+    // "sabqi": "Para 14 (Full)",
+    // "manzil": "Para 5 (Quarter 1)",
+    // "sabaqgrade": "Excellent",
+    // "sabqigrade": "Good",
+    // "manzilgrade": "Needs Practice",
+    // "teacher_note": "Masha'Allah, excellent tajweed and focus today!",
+
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final progressLog = ProgressLogs.firstWhere(
+      (log) => log['studentId'] == studentId && log['date'] == today,
+      orElse: () => <String, dynamic>{},
+    );
+    return {
+      "attendance": progressLog['attendanceStatus'] ?? "Not Logged",
+      "sabaq": progressLog['sabaq'] != null
+          ? "Para ${progressLog['sabaq']['para']}, Surah ${progressLog['sabaq']['surah']} (Lines: ${progressLog['sabaq']['lines']})"
+          : "Not Logged",
+      "sabqi": progressLog['sabqi'] ?? "Not Logged",
+      "manzil": progressLog['manzil'] ?? "Not Logged",
+      "sabaqgrade":
+          progressLog['grade'] != null && progressLog['grade'].length > 0
+          ? progressLog['grade'][0]
+          : "Not Graded",
+      "sabqigrade":
+          progressLog['grade'] != null && progressLog['grade'].length > 1
+          ? progressLog['grade'][1]
+          : "Not Graded",
+      "manzilgrade":
+          progressLog['grade'] != null && progressLog['grade'].length > 2
+          ? progressLog['grade'][2]
+          : "Not Graded",
+
+      "teacher_note": progressLog['teacherNote'] ?? "No Notes",
+    };
   }
 }

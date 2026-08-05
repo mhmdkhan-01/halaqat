@@ -178,23 +178,31 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const ParentDashboard()),
         );
       } else {
-        String res = AppData.validateLoginUser(
+        Map<String, dynamic> res = AppData.validateLoginUser(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
-        if (res.split(':')[0] == "T") {
-          String uid = res.split(':')[1];
-          await AppData.SaveLoginInfo(uid, 'teacher', true);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const TeacherMainNavigation(),
-            ),
-          );
+        if (res['status'] == "success") {
+          String uid = res['userId'];
+          String role = res['role'];
+          await AppData.SaveLoginInfo(uid, role, true);
+          if (res['role'] == "teacher") {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TeacherMainNavigation(),
+              ),
+            );
+          } else if (res['role'] == "parent") {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ParentDashboard()),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(res.split(':')[1]),
+              content: Text(res['message'] ?? "Login Failed"),
               backgroundColor: const Color.fromARGB(255, 240, 6, 6),
             ),
           );

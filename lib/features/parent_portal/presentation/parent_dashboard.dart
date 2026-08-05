@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 // Import your reports screen here
 import 'parent_reports_screen.dart';
 
@@ -14,8 +16,8 @@ class ParentDashboard extends StatefulWidget {
 class _ParentDashboardState extends State<ParentDashboard> {
   // Mock data for children
   final List<Map<String, dynamic>> _children = [
-    {"id": "1", "name": "Zubair Khan", "grade": "Hifz - Class A"},
-    {"id": "2", "name": "Ayesha Khan", "grade": "Nazra - Class B"},
+    {"name": "Zubair Khan"},
+    {"name": "Ayesha Khan"},
   ];
 
   int _selectedChildIndex = 0;
@@ -32,26 +34,42 @@ class _ParentDashboardState extends State<ParentDashboard> {
     "teacher_note": "Masha'Allah, excellent tajweed and focus today!",
   };
 
-  final List<Map<String, dynamic>> _historyLogs = [
-    {
-      "date": "July 14, 2026",
-      "attendance": "Present",
-      "sabaq": "Para 14, Surah An-Nahl (100-128)",
-      "sabqi": "Para 13 (Full)",
-    },
-    {
-      "date": "July 13, 2026",
-      "attendance": "Present",
-      "sabaq": "Para 14, Surah An-Nahl (50-99)",
-      "sabqi": "Para 12 (Full)",
-    },
-    {
-      "date": "July 12, 2026",
-      "attendance": "Absent",
-      "sabaq": "N/A",
-      "sabqi": "N/A",
-    },
-  ];
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _loadChildrenAndReports();
+  }
+
+  Future<void> _loadChildrenAndReports() async {
+    var sp = await SharedPreferences.getInstance();
+
+    // Fetch children for the parent (replace with actual parent ID)
+    final parentId = sp.getString("uid") ?? ""; // Replace with actual parent ID
+    final children = await AppData.getChildrenForParent(parentId);
+
+    if (children.isNotEmpty) {
+      setState(() {
+        _children.clear();
+        _children.addAll(children);
+      });
+
+      // Fetch today's report for the first child
+      final firstChildId = children[0]['studentId'] ?? "NA";
+      final todayReport = await AppData.getTodayReport(firstChildId);
+      if (todayReport['attendance'] == "Not Logged") {
+        setState(() {
+          _todayReport.clear();
+        });
+        return;
+      }
+
+      setState(() {
+        _todayReport.clear();
+        _todayReport.addAll(todayReport);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -403,133 +421,136 @@ class _ParentDashboardState extends State<ParentDashboard> {
             ),
 
             // 4. Historical Timeline Header
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Text(
-                  'recent_history'.tr(),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-              ),
-            ),
+            // SliverToBoxAdapter(
+            //   child: Padding(
+            //     padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            //     child: Text(
+            //       'recent_history'.tr(),
+            //       style: const TextStyle(
+            //         fontSize: 18,
+            //         fontWeight: FontWeight.bold,
+            //         color: Color(0xFF1E293B),
+            //       ),
+            //     ),
+            //   ),
+            // ),
 
             // 5. Timeline List (SliverList)
-            SliverPadding(
-              padding: const EdgeInsets.all(20.0),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final log = _historyLogs[index];
-                  final isAbsent = log['attendance'] == 'Absent';
+            // SliverPadding(
+            //   padding: const EdgeInsets.all(20.0),
+            //   sliver: SliverList(
+            //     delegate: SliverChildBuilderDelegate((context, index) {
+            //       final log = _historyLogs[index];
+            //       final isAbsent = log['attendance'] == 'Absent';
 
-                  return IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Timeline Left Line & Bullet
-                        Column(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: isAbsent
-                                    ? const Color(0xFFEF4444)
-                                    : const Color(0xFF0A5C36),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            Expanded(
-                              child: Container(
-                                width: 2,
-                                color: const Color(0xFFE2E8F0),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 16),
+            //       return IntrinsicHeight(
+            //         child: Row(
+            //           crossAxisAlignment: CrossAxisAlignment.stretch,
+            //           children: [
+            //             // Timeline Left Line & Bullet
+            //             Column(
+            //               children: [
+            //                 Container(
+            //                   width: 12,
+            //                   height: 12,
+            //                   decoration: BoxDecoration(
+            //                     color: isAbsent
+            //                         ? const Color(0xFFEF4444)
+            //                         : const Color(0xFF0A5C36),
+            //                     shape: BoxShape.circle,
+            //                   ),
+            //                 ),
+            //                 Expanded(
+            //                   child: Container(
+            //                     width: 2,
+            //                     color: const Color(0xFFE2E8F0),
+            //                   ),
+            //                 ),
+            //               ],
+            //             ),
+            //             const SizedBox(width: 16),
 
-                        // Card Contents
-                        Expanded(
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 20),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.015),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      log['date'],
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: Color(0xFF1E293B),
-                                      ),
-                                    ),
-                                    Text(
-                                      log['attendance']
-                                          .toString()
-                                          .toLowerCase()
-                                          .tr(),
-                                      style: TextStyle(
-                                        color: isAbsent
-                                            ? const Color(0xFFEF4444)
-                                            : const Color(0xFF10B981),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (!isAbsent) ...[
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    "${'sabaq'.tr()}: ${log['sabaq']}",
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFF475569),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "${'sabqi'.tr()}: ${log['sabqi']}",
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }, childCount: _historyLogs.length),
-              ),
-            ),
+            //             // Card Contents
+            //             Expanded(
+            //               child: Container(
+            //                 margin: const EdgeInsets.only(bottom: 20),
+            //                 padding: const EdgeInsets.all(16),
+            //                 decoration: BoxDecoration(
+            //                   color: Colors.white,
+            //                   borderRadius: BorderRadius.circular(16),
+            //                   boxShadow: [
+            //                     BoxShadow(
+            //                       color: Colors.black.withOpacity(0.015),
+            //                       blurRadius: 10,
+            //                       offset: const Offset(0, 4),
+            //                     ),
+            //                   ],
+            //                 ),
+            //                 child: Column(
+            //                   crossAxisAlignment: CrossAxisAlignment.start,
+            //                   children: [
+            //                     Row(
+            //                       mainAxisAlignment:
+            //                           MainAxisAlignment.spaceBetween,
+            //                       children: [
+            //                         Text(
+            //                           log['date'],
+            //                           style: const TextStyle(
+            //                             fontWeight: FontWeight.bold,
+            //                             fontSize: 14,
+            //                             color: Color(0xFF1E293B),
+            //                           ),
+            //                         ),
+            //                         Text(
+            //                           log['attendance']
+            //                               .toString()
+            //                               .toLowerCase()
+            //                               .tr(),
+            //                           style: TextStyle(
+            //                             color: isAbsent
+            //                                 ? const Color(0xFFEF4444)
+            //                                 : const Color(0xFF10B981),
+            //                             fontWeight: FontWeight.bold,
+            //                             fontSize: 12,
+            //                           ),
+            //                         ),
+            //                       ],
+            //                     ),
+            //                     if (!isAbsent) ...[
+            //                       const SizedBox(height: 10),
+            //                       Text(
+            //                         "${'sabaq'.tr()}: ${log['sabaq']}",
+            //                         style: const TextStyle(
+            //                           fontSize: 13,
+            //                           color: Color(0xFF475569),
+            //                         ),
+            //                       ),
+            //                       const SizedBox(height: 4),
+            //                       Text(
+            //                         "${'sabqi'.tr()}: ${log['sabqi']}",
+            //                         style: const TextStyle(
+            //                           fontSize: 13,
+            //                           color: Color(0xFF64748B),
+            //                         ),
+            //                       ),
+            //                     ],
+            //                   ],
+            //                 ),
+            //               ),
+            //             ),
+            //           ],
+            //         ),
+            //       );
+            //     }, childCount: _historyLogs.length),
+            //   ),
+            // ),
             //logout button
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20.0,
+                  vertical: 30.0,
+                ),
                 child: ElevatedButton(
                   onPressed: () {
                     // Navigate back to the login screen
