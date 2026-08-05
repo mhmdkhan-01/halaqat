@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_launcher_icons/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppData {
@@ -23,18 +22,18 @@ class AppData {
   static Map<String, Set<String>> submittedProgressLogs = {};
 
   static final Map<String, Map<String, Map<String, String>>> _attendanceLogs = {
-    "2026-08-01": {
-      "Session 1 (Sabaq)": {
-        "std_8849204": "Present",
-        "std_9920134": "Absent",
-        "std_1111111": "Late",
-      },
-      "Session 2 (Sabqi)": {
-        "std_8849204": "Present",
-        "std_9920134": "Present",
-        "std_1111111": "Absent",
-      },
-    },
+    // "2026-08-01": {
+    //   "Session 1 (Sabaq)": {
+    //     "std_8849204": "Present",
+    //     "std_9920134": "Absent",
+    //     "std_1111111": "Late",
+    //   },
+    //   "Session 2 (Sabqi)": {
+    //     "std_8849204": "Present",
+    //     "std_9920134": "Present",
+    //     "std_1111111": "Absent",
+    //   },
+    // },
   };
   // Existing Mock Memory Data
   // static List<Map<String, dynamic>> attendanceLogs = [
@@ -69,36 +68,36 @@ class AppData {
   ];
 
   static List<Map<String, dynamic>> ProgressLogs = [
-    {
-      "logId": "log_5529104",
-      "studentId": "std_8849204",
-      "studentName": "Ahmad Muhammad",
-      "loggedByTeacherId": "teacher_uid_101",
-      "date": "2026-07-16",
-      "attendanceStatus": "present",
-      "sabaq": {
-        "surah": "Al-Baqarah",
-        "para": 2,
-        "startAyah": 142,
-        "endAyah": 150,
-        "lines": 17,
-      },
-      "sabqi": "para 1 page 2 to 5",
-      "manzil": "para 2",
-      "grade": ["Excellent", "Good", "Needs Practice"],
-    },
-    {
-      "logId": "log_5529101",
-      "studentId": "std_8849204",
-      "studentName": "Ahmad Muhammad",
-      "loggedByTeacherId": "teacher_uid_101",
-      "date": "2026-07-14",
-      "attendanceStatus": "absent",
-      "sabaq": null,
-      "sabqi": null,
-      "manzil": null,
-      "grade": ["N/A", "N/A", "N/A"],
-    },
+    // {
+    //   "logId": "log_5529104",
+    //   "studentId": "std_8849204",
+    //   "studentName": "Ahmad Muhammad",
+    //   "loggedByTeacherId": "teacher_uid_101",
+    //   "date": "2026-07-16",
+    //   "attendanceStatus": "present",
+    //   "sabaq": {
+    //     "surah": "Al-Baqarah",
+    //     "para": 2,
+    //     "startAyah": 142,
+    //     "endAyah": 150,
+    //     "lines": 17,
+    //   },
+    //   "sabqi": "para 1 page 2 to 5",
+    //   "manzil": "para 2",
+    //   "grade": ["Excellent", "Good", "Needs Practice"],
+    // },
+    // {
+    //   "logId": "log_5529101",
+    //   "studentId": "std_8849204",
+    //   "studentName": "Ahmad Muhammad",
+    //   "loggedByTeacherId": "teacher_uid_101",
+    //   "date": "2026-07-14",
+    //   "attendanceStatus": "absent",
+    //   "sabaq": null,
+    //   "sabqi": null,
+    //   "manzil": null,
+    //   "grade": ["N/A", "N/A", "N/A"],
+    // },
   ];
 
   static List<Map<String, dynamic>> students = [
@@ -624,7 +623,6 @@ class AppData {
       }
     });
     int totalClasses = _attendanceLogs.length;
-    debugPrint("Total classes = $_attendanceLogs");
     int totalPresents = ProgressLogs.where(
       (log) =>
           log['studentId'] == studentId &&

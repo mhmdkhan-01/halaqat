@@ -23,15 +23,16 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
   late List<Map<String, dynamic>> _examResults;
 
   // Linked mapping key matching our collections
-  final String _studentId = "std_8849204";
 
   @override
   void initState() {
     super.initState();
     // Synchronize all dependencies instantly from AppData repository hooks
-    _historyLogs = AppData.getHistoryLogsForStudent(_studentId);
-    _analytics = AppData.getStudentAnalytics(_studentId);
-    _calendarAttendance = AppData.getMonthlyCalendarAttendance(_studentId);
+    _historyLogs = AppData.getHistoryLogsForStudent(widget.studentId);
+    _analytics = AppData.getStudentAnalytics(widget.studentId);
+    _calendarAttendance = AppData.getMonthlyCalendarAttendance(
+      widget.studentId,
+    );
     _examResults = AppData.getExamResults();
   }
 
@@ -89,15 +90,26 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
             // --- 3. Complete Daily Progress Logs ---
             _buildSectionHeader("Daily Progress Logs"),
             const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _historyLogs.length,
-              itemBuilder: (context, index) {
-                final log = _historyLogs[index];
-                return _buildDailyHistoryCard(log);
-              },
-            ),
+            (_historyLogs.isEmpty)
+                ? Center(
+                    child: Text(
+                      'No Data is logged yet.',
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _historyLogs.length,
+                    itemBuilder: (context, index) {
+                      final log = _historyLogs[index];
+                      return _buildDailyHistoryCard(log);
+                    },
+                  ),
 
             const SizedBox(height: 24),
 
