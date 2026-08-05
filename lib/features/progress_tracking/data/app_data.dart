@@ -16,6 +16,7 @@ class AppData {
   static const String _keyUid = "uid";
   static const String _keyRole = "cached_role";
   static const String _keyIsLoggedIn = "cached_IsLoggedIn";
+  static const String _keyExams = "cashed_exams";
   //for attendance tab to see if already submitted or not
   static Map<String, Set<String>> submittedSessions = {};
   //for daily entery screen to see if progress log is already submitted or not
@@ -164,6 +165,22 @@ class AppData {
     // },
   ];
 
+  static List<Map<String, dynamic>> exams = [
+    {
+      "id": "e1",
+      "title": "Monthly Hifz Evaluation",
+      "date": DateTime(2026, 8, 20),
+      "syllabus": "Surah Al-Baqarah (Ayat 1-100)",
+      "type": "Oral",
+    },
+    {
+      "id": "e2",
+      "title": "Quarterly Manzil Review",
+      "date": DateTime(2026, 9, 15),
+      "syllabus": "Para 1 to Para 5",
+      "type": "Oral",
+    },
+  ];
   // ==========================================
   // SHARED PREFERENCES HELPER METHODS
   // ==========================================
@@ -222,12 +239,15 @@ class AppData {
     if (cachedProgressLogs != null) {
       ProgressLogs = cachedProgressLogs;
     }
-
+    final cachedExams = await _getFromPrefs(_keyExams);
+    if (cachedExams != null) {
+      exams = cachedExams;
+    }
     final cachedUsers = await _getFromPrefs(_keyUsers);
     if (cachedUsers != null) {
       users = cachedUsers;
     }
-    // await loadAttendanceLogs();
+    await loadAttendanceLogs();
   }
 
   static Future<void> loadAttendanceLogs() async {
@@ -964,5 +984,24 @@ class AppData {
 
       "teacher_note": progressLog['teacherNote'] ?? "No Notes",
     };
+  }
+
+  static List<Map<String, dynamic>> getExams() {
+    return exams;
+  }
+
+  static void addExam(Map<String, dynamic> exam) {
+    exams.add(exam);
+    _saveToPrefs(_keyExams, exams);
+  }
+
+  static void updateExam(Map<String, dynamic> exam, int index) {
+    exams[index] = exam;
+    _saveToPrefs(_keyExams, exams);
+  }
+
+  static void deleteExam(int index) {
+    exams.removeAt(index);
+    _saveToPrefs(_keyExams, exams);
   }
 }

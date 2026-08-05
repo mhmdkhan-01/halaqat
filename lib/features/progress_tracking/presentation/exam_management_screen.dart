@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 
 class ExamManagementScreen extends StatefulWidget {
   const ExamManagementScreen({super.key});
@@ -10,22 +11,12 @@ class ExamManagementScreen extends StatefulWidget {
 
 class _ExamManagementScreenState extends State<ExamManagementScreen> {
   // Mock Data for scheduled exams
-  final List<Map<String, dynamic>> _exams = [
-    {
-      "id": "e1",
-      "title": "Monthly Hifz Evaluation",
-      "date": DateTime(2026, 8, 20),
-      "syllabus": "Surah Al-Baqarah (Ayat 1-100)",
-      "type": "Oral",
-    },
-    {
-      "id": "e2",
-      "title": "Quarterly Manzil Review",
-      "date": DateTime(2026, 9, 15),
-      "syllabus": "Para 1 to Para 5",
-      "type": "Oral",
-    },
-  ];
+  List<Map<String, dynamic>> _exams = AppData.getExams();
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -447,26 +438,27 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                       onPressed: () {
                         if (titleController.text.isNotEmpty &&
                             syllabusController.text.isNotEmpty) {
-                          setState(() {
-                            if (isEditing) {
-                              _exams[index!] = {
-                                "id": exam['id'],
-                                "title": titleController.text,
-                                "syllabus": syllabusController.text,
-                                "date": selectedDate,
-                                "type": selectedType,
-                              };
-                            } else {
-                              _exams.add({
-                                "id": DateTime.now().millisecondsSinceEpoch
-                                    .toString(),
-                                "title": titleController.text,
-                                "syllabus": syllabusController.text,
-                                "date": selectedDate,
-                                "type": selectedType,
-                              });
-                            }
-                          });
+                          if (isEditing) {
+                            Map<String, dynamic> ex = {
+                              "id": exam['id'],
+                              "title": titleController.text,
+                              "syllabus": syllabusController.text,
+                              "date": selectedDate,
+                              "type": selectedType,
+                            };
+                            AppData.addExam(ex);
+                          } else {
+                            Map<String, dynamic> ex = {
+                              "id": DateTime.now().millisecondsSinceEpoch
+                                  .toString(),
+                              "title": titleController.text,
+                              "syllabus": syllabusController.text,
+                              "date": selectedDate,
+                              "type": selectedType,
+                            };
+                            AppData.updateExam(ex, index!);
+                          }
+                          setState(() {});
                           Navigator.pop(context);
                         }
                       },
@@ -504,9 +496,8 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
           ),
           TextButton(
             onPressed: () {
-              setState(() {
-                _exams.removeAt(index);
-              });
+              AppData.deleteExam(index);
+              setState(() {});
               Navigator.pop(context);
             },
             child: Text(
