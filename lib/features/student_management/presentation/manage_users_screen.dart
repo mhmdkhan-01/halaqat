@@ -3,7 +3,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 
 class ManageUsersScreen extends StatefulWidget {
-  const ManageUsersScreen({super.key});
+  final int index;
+  const ManageUsersScreen({super.key, required this.index});
 
   @override
   State<ManageUsersScreen> createState() => _ManageUsersScreenState();
@@ -12,7 +13,6 @@ class ManageUsersScreen extends StatefulWidget {
 class _ManageUsersScreenState extends State<ManageUsersScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
   // Mock Data
   final List<Map<String, dynamic>> _students =
       AppData.getStudentsLegacyFormat();
@@ -38,6 +38,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.index = widget.index;
   }
 
   @override

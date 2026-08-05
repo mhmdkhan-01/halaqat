@@ -207,7 +207,8 @@ class AdminHomeTab extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ManageUsersScreen(),
+                            builder: (context) =>
+                                const ManageUsersScreen(index: 1),
                           ),
                         );
                       },
@@ -221,7 +222,8 @@ class AdminHomeTab extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ManageUsersScreen(),
+                            builder: (context) =>
+                                const ManageUsersScreen(index: 0),
                           ),
                         );
                       },
@@ -378,7 +380,7 @@ class ManageUsersTab extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const ManageUsersScreen(),
+                  builder: (context) => const ManageUsersScreen(index: 1),
                 ),
               );
             },
@@ -392,7 +394,7 @@ class ManageUsersTab extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const ManageUsersScreen(),
+                  builder: (context) => const ManageUsersScreen(index: 0),
                 ),
               );
             },
@@ -406,7 +408,7 @@ class ManageUsersTab extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const ManageUsersScreen(),
+                  builder: (context) => const ManageUsersScreen(index: 2),
                 ),
               );
             },
