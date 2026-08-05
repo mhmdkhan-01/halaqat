@@ -103,73 +103,84 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
 
   // --- Students Management List ---
   Widget _buildStudentsTab() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      physics: const BouncingScrollPhysics(),
-      itemCount: _students.length,
-      itemBuilder: (context, index) {
-        final student = _students[index];
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.grey.withOpacity(0.15)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      student['name'] ?? '',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.swap_horizontal_circle_outlined,
-                        color: Color(0xFF0A5C36),
-                      ),
-                      onPressed: () =>
-                          _showAssignRelationsSheet(student, index),
-                      tooltip: "Assign Relationships",
-                    ),
-                  ],
-                ),
-                const Divider(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildRelationIndicator(
-                        icon: Icons.badge_outlined,
-                        roleLabel: "teacher".tr(),
-                        assignedName: student['teacher'] ?? "Unassigned",
-                        color: Colors.teal,
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildRelationIndicator(
-                        icon: Icons.family_restroom_rounded,
-                        roleLabel: "parent".tr(),
-                        assignedName: student['parent'] ?? "Unassigned",
-                        color: Colors.pink,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+    return (_students.isEmpty)
+        ? Center(
+            child: Text(
+              'No Students Available',
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
             ),
-          ),
-        );
-      },
-    );
+          )
+        : ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            physics: const BouncingScrollPhysics(),
+            itemCount: _students.length,
+            itemBuilder: (context, index) {
+              final student = _students[index];
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.grey.withOpacity(0.15)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            student['name'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.swap_horizontal_circle_outlined,
+                              color: Color(0xFF0A5C36),
+                            ),
+                            onPressed: () =>
+                                _showAssignRelationsSheet(student, index),
+                            tooltip: "Assign Relationships",
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildRelationIndicator(
+                              icon: Icons.badge_outlined,
+                              roleLabel: "teacher".tr(),
+                              assignedName: student['teacher'] ?? "Unassigned",
+                              color: Colors.teal,
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildRelationIndicator(
+                              icon: Icons.family_restroom_rounded,
+                              roleLabel: "parent".tr(),
+                              assignedName: student['parent'] ?? "Unassigned",
+                              color: Colors.pink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
   }
 
   Widget _buildRelationIndicator({
@@ -215,54 +226,65 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
 
   // --- Teachers & Parents Simple Lists ---
   Widget _buildGenericUserTab(List<String> userList, String role) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      physics: const BouncingScrollPhysics(),
-      itemCount: userList.length,
-      itemBuilder: (context, index) {
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.withOpacity(0.15)),
-          ),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: role == "teacher"
-                  ? Colors.teal.withOpacity(0.12)
-                  : Colors.pink.withOpacity(0.12),
-              child: Icon(
-                role == "teacher"
-                    ? Icons.badge_outlined
-                    : Icons.family_restroom_rounded,
-                color: role == "teacher" ? Colors.teal : Colors.pink,
+    return (userList.isEmpty)
+        ? Center(
+            child: Text(
+              'No $role Available',
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
               ),
             ),
-            title: Text(
-              userList[index],
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            trailing: IconButton(
-              icon: const Icon(
-                Icons.delete_outline_rounded,
-                color: Colors.redAccent,
-              ),
-              onPressed: () {
-                setState(() {
-                  userList.removeAt(index);
-                  if (role == "teacher") {
-                    _teachersIds.removeAt(index);
-                  } else {
-                    _parentsIds.removeAt(index);
-                  }
-                });
-              },
-            ),
-          ),
-        );
-      },
-    );
+          )
+        : ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            physics: const BouncingScrollPhysics(),
+            itemCount: userList.length,
+            itemBuilder: (context, index) {
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.withOpacity(0.15)),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: role == "teacher"
+                        ? Colors.teal.withOpacity(0.12)
+                        : Colors.pink.withOpacity(0.12),
+                    child: Icon(
+                      role == "teacher"
+                          ? Icons.badge_outlined
+                          : Icons.family_restroom_rounded,
+                      color: role == "teacher" ? Colors.teal : Colors.pink,
+                    ),
+                  ),
+                  title: Text(
+                    userList[index],
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.redAccent,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        userList.removeAt(index);
+                        if (role == "teacher") {
+                          _teachersIds.removeAt(index);
+                        } else {
+                          _parentsIds.removeAt(index);
+                        }
+                      });
+                    },
+                  ),
+                ),
+              );
+            },
+          );
   }
 
   // --- Bottom Sheets ---
