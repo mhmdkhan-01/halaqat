@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 
 class PublishResultsScreen extends StatefulWidget {
   const PublishResultsScreen({super.key});
@@ -10,38 +11,23 @@ class PublishResultsScreen extends StatefulWidget {
 
 class _PublishResultsScreenState extends State<PublishResultsScreen> {
   // Mock Scheduled Exams
-  final List<String> _exams = [
-    "Monthly Hifz Evaluation - Aug 2026",
-    "Quarterly Manzil Review - Sep 2026",
-    "Surah Al-Baqarah Retake Exam",
-  ];
+  final List<Map<String, dynamic>> _exams = AppData.getExams();
   String? _selectedExam;
-
   // Mock Student List with grading fields
   final List<Map<String, dynamic>> _students = [
     {
-      "id": "s1",
-      "name": "Ahmad Ali",
-      "rollNo": "A-102",
-      "marks": "",
-      "remarks": "",
-      "isGraded": false,
-    },
-    {
-      "id": "s2",
-      "name": "Hamza Yusuf",
-      "rollNo": "A-108",
-      "marks": "",
-      "remarks": "",
-      "isGraded": false,
-    },
-    {
-      "id": "s3",
-      "name": "Zainab Fatima",
-      "rollNo": "A-110",
-      "marks": "",
-      "remarks": "",
-      "isGraded": false,
+      // --- Student Identity ---
+      "studentId": "std_8849204", // From App Data
+      "studentName": "Ahmad Muhammad", // From App Data
+      // --- Exam Metadata ---
+      "examId": "exam_01", // From App Data
+      "sessionName": "Term 1 - 2026", // From App Data
+      "status": "Published", // From App Data
+      // --- Evaluation / Grading ---
+      "hifzScore": "94", // From App Data
+      "tajweedGrade": "A", // From App Data
+      "remarks": "Excellent", // From Publish Result
+      "isGraded": true, // From Publish Result
     },
   ];
 
@@ -49,7 +35,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
   void initState() {
     super.initState();
     if (_exams.isNotEmpty) {
-      _selectedExam = _exams[0];
+      _selectedExam = _exams[0]['title'];
     }
   }
 
@@ -100,11 +86,13 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                         Icons.keyboard_arrow_down_rounded,
                         color: Color(0xFF0A5C36),
                       ),
-                      items: _exams.map((exam) {
-                        return DropdownMenuItem(
-                          value: exam,
+                      items: _exams.map<DropdownMenuItem<String>>((exam) {
+                        final String examName = exam['title']?.toString() ?? '';
+
+                        return DropdownMenuItem<String>(
+                          value: examName,
                           child: Text(
-                            exam,
+                            examName,
                             style: const TextStyle(
                               color: Color(0xFF1E293B),
                               fontWeight: FontWeight.w600,
@@ -113,7 +101,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                           ),
                         );
                       }).toList(),
-                      onChanged: (val) {
+                      onChanged: (String? val) {
                         setState(() {
                           _selectedExam = val;
                         });
@@ -198,7 +186,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      student['name'],
+                      student['studentName'],
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -207,7 +195,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "${'roll_no'.tr()}: ${student['rollNo']}",
+                      "Tap To Mark Grade",
                       style: const TextStyle(
                         color: Color(0xFF64748B),
                         fontSize: 12,
@@ -226,7 +214,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      "${student['marks']}/100",
+                      "${student['hifzScore']}/100",
                       style: const TextStyle(
                         color: Color(0xFF0A5C36),
                         fontSize: 13,
@@ -292,7 +280,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
   }
 
   void _openGradingDialog(Map<String, dynamic> student, int index) {
-    final marksController = TextEditingController(text: student['marks']);
+    final marksController = TextEditingController(text: student['hifzScore']);
     final remarksController = TextEditingController(text: student['remarks']);
 
     showDialog(
@@ -303,7 +291,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
             borderRadius: BorderRadius.circular(20),
           ),
           title: Text(
-            "${'grade'.tr()} ${student['name']}",
+            "${'grade'.tr()} ${student['studentName']}",
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           content: SingleChildScrollView(
@@ -373,7 +361,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                   setState(() {
                     _students[index] = {
                       ...student,
-                      "marks": marksController.text,
+                      "hifzScore": marksController.text,
                       "remarks": remarksController.text,
                       "isGraded": true,
                     };

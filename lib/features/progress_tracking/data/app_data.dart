@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,6 +37,22 @@ class AppData {
     //   },
     // },
   };
+
+  static final months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
   // Existing Mock Memory Data
   // static List<Map<String, dynamic>> attendanceLogs = [
   //   {
@@ -181,6 +198,10 @@ class AppData {
       "type": "Oral",
     },
   ];
+  //{
+  // 'exam name':[ Map<String, dynamic> , Map<String, dynamic>...]
+  //}
+  static Map<String, List<Map<String, dynamic>>> resultsLogs = {};
   // ==========================================
   // SHARED PREFERENCES HELPER METHODS
   // ==========================================
@@ -613,13 +634,18 @@ class AppData {
   static List<Map<String, dynamic>> getExamResults() {
     return [
       {
-        "examId": "exam_01",
-        "studentId": "std_8849204",
-        "studentName": "Ahmad Muhammad",
-        "sessionName": "Term 1 - 2026",
-        "hifzScore": "94/100",
-        "tajweedGrade": "A",
-        "status": "Published",
+        // --- Student Identity ---
+        "studentId": "std_8849204", // From App Data
+        "studentName": "Ahmad Muhammad", // From App Data
+        // --- Exam Metadata ---
+        "examId": "exam_01", // From App Data
+        "sessionName": "Term 1 - 2026", // From App Data
+        "status": "Published", // From App Data
+        // --- Evaluation / Grading ---
+        "hifzScore": "94/100", // From App Data
+        "tajweedGrade": "A", // From App Data
+        "remarks": "Excellent", // From Publish Result
+        "isGraded": true, // From Publish Result
       },
     ];
   }
@@ -992,6 +1018,26 @@ class AppData {
 
   static void addExam(Map<String, dynamic> exam) {
     exams.add(exam);
+    getStudents().forEach((student) {
+      Map<String, dynamic> newentrie = {
+        // --- Student Identity ---
+        "studentId": student['studentId'], // From App Data
+        "studentName": student['name'], // From App Data
+        // --- Exam Metadata ---
+        "examId": exam['id'], // From App Data
+        "sessionName": exam['title'], // From App Data
+        "status": "Pending", // From App Data
+        // --- Evaluation / Grading ---
+        "hifzScore": "0", // From App Data
+        "tajweedGrade": "X", // From App Data
+        "remarks": "X", // From Publish Result
+        "isGraded": false, // From Publish Result
+      };
+      resultsLogs[exam['id']] = [];
+      resultsLogs[exam['id']]!.add(newentrie);
+      debugPrint("Added: $newentrie");
+    });
+
     _saveToPrefs(_keyExams, exams);
   }
 
@@ -1003,5 +1049,15 @@ class AppData {
   static void deleteExam(int index) {
     exams.removeAt(index);
     _saveToPrefs(_keyExams, exams);
+  }
+
+  static List<Map<String, String>> getExamDetails() {
+    List<Map<String, String>> names = [];
+    DateTime d = DateTime(12, 1, 1);
+    String dateString = '${months[d.month]} ${d.day}';
+    exams.forEach((exam) {
+      names.add({'id': exam['id'], 'name': '${exam['title']} - $dateString'});
+    });
+    return names;
   }
 }

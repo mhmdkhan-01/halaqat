@@ -255,7 +255,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                 top: 24,
                 left: 24,
                 right: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 10,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -446,7 +446,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                               "date": selectedDate,
                               "type": selectedType,
                             };
-                            AppData.addExam(ex);
+                            AppData.updateExam(ex, index!);
                           } else {
                             Map<String, dynamic> ex = {
                               "id": DateTime.now().millisecondsSinceEpoch
@@ -456,7 +456,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                               "date": selectedDate,
                               "type": selectedType,
                             };
-                            AppData.updateExam(ex, index!);
+                            AppData.addExam(ex);
                           }
                           setState(() {});
                           Navigator.pop(context);
