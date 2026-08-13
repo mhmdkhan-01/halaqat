@@ -23,6 +23,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
       "examId": "exam_01", // From App Data
       "sessionName": "Term 1 - 2026", // From App Data
       "status": "Published", // From App Data
+      "syllabus": "Para 1",
       // --- Evaluation / Grading ---
       "hifzScore": "94", // From App Data
       "tajweedGrade": "A", // From App Data
@@ -282,6 +283,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
   void _openGradingDialog(Map<String, dynamic> student, int index) {
     final marksController = TextEditingController(text: student['hifzScore']);
     final remarksController = TextEditingController(text: student['remarks']);
+    final syllabusController = TextEditingController(text: student['syllabus']);
 
     showDialog(
       context: context,
@@ -313,6 +315,24 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                   decoration: InputDecoration(
                     hintText: "e.g., 85",
                     suffixText: "/ 100",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  "Syllabus".tr(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: syllabusController,
+                  decoration: InputDecoration(
+                    hintText: "e.g., Para 1 to 5",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
