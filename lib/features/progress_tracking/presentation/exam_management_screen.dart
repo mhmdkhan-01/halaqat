@@ -165,28 +165,28 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.book_rounded,
-                  size: 16,
-                  color: Color(0xFF64748B),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    "${'syllabus'.tr()}: ${exam['syllabus']}",
-                    style: const TextStyle(
-                      color: Color(0xFF475569),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // const SizedBox(height: 8),
+            // Row(
+            //   crossAxisAlignment: CrossAxisAlignment.start,
+            //   children: [
+            //     const Icon(
+            //       Icons.book_rounded,
+            //       size: 16,
+            //       color: Color(0xFF64748B),
+            //     ),
+            //     const SizedBox(width: 6),
+            //     Expanded(
+            //       child: Text(
+            //         "${'syllabus'.tr()}: ${exam['syllabus']}",
+            //         style: const TextStyle(
+            //           color: Color(0xFF475569),
+            //           fontSize: 13,
+            //           fontWeight: FontWeight.w600,
+            //         ),
+            //       ),
+            //     ),
+            //   ],
+            // ),
             const Divider(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -231,9 +231,6 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
     final isEditing = exam != null;
     final titleController = TextEditingController(
       text: isEditing ? exam['title'] : "",
-    );
-    final syllabusController = TextEditingController(
-      text: isEditing ? exam['syllabus'] : "",
     );
     DateTime selectedDate = isEditing
         ? exam['date']
@@ -297,26 +294,26 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  // const SizedBox(height: 20),
 
                   // Syllabus Details
-                  Text(
-                    "syllabus_details".tr(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: syllabusController,
-                    decoration: InputDecoration(
-                      hintText: "e.g., Surah Ya-Sin or Para 30",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
+                  // Text(
+                  //   "syllabus_details".tr(),
+                  //   style: const TextStyle(
+                  //     fontWeight: FontWeight.bold,
+                  //     color: Color(0xFF64748B),
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 8),
+                  // TextField(
+                  //   controller: syllabusController,
+                  //   decoration: InputDecoration(
+                  //     hintText: "e.g., Surah Ya-Sin or Para 30",
+                  //     border: OutlineInputBorder(
+                  //       borderRadius: BorderRadius.circular(12),
+                  //     ),
+                  //   ),
+                  // ),
                   const SizedBox(height: 20),
 
                   // Date Picker & Exam Type Row
@@ -403,7 +400,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                                   vertical: 14,
                                 ),
                               ),
-                              items: ["Oral", "Written", "Practical"]
+                              items: ["Oral", "Written"]
                                   .map(
                                     (type) => DropdownMenuItem(
                                       value: type,
@@ -436,13 +433,11 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                         ),
                       ),
                       onPressed: () {
-                        if (titleController.text.isNotEmpty &&
-                            syllabusController.text.isNotEmpty) {
+                        if (titleController.text.isNotEmpty) {
                           if (isEditing) {
                             Map<String, dynamic> ex = {
                               "id": exam['id'],
                               "title": titleController.text,
-                              "syllabus": syllabusController.text,
                               "date": selectedDate,
                               "type": selectedType,
                             };
@@ -452,7 +447,6 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                               "id": DateTime.now().millisecondsSinceEpoch
                                   .toString(),
                               "title": titleController.text,
-                              "syllabus": syllabusController.text,
                               "date": selectedDate,
                               "type": selectedType,
                             };

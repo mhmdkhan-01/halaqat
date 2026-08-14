@@ -186,14 +186,12 @@ class AppData {
       "id": "e1",
       "title": "Monthly Hifz Evaluation",
       "date": DateTime(2026, 8, 20),
-      "syllabus": "Surah Al-Baqarah (Ayat 1-100)",
       "type": "Oral",
     },
     {
       "id": "e2",
       "title": "Quarterly Manzil Review",
       "date": DateTime(2026, 9, 15),
-      "syllabus": "Para 1 to Para 5",
       "type": "Oral",
     },
   ];
@@ -640,6 +638,7 @@ class AppData {
         "examId": "exam_01", // From App Data
         "sessionName": "Term 1 - 2026", // From App Data
         "status": "Published", // From App Data
+        "syllabus": "Para 1",
         // --- Evaluation / Grading ---
         "hifzScore": "94/100", // From App Data
         "tajweedGrade": "A", // From App Data
@@ -1017,25 +1016,26 @@ class AppData {
 
   static void addExam(Map<String, dynamic> exam) {
     exams.add(exam);
-    getStudents().forEach((student) {
-      Map<String, dynamic> newentrie = {
-        // --- Student Identity ---
-        "studentId": student['studentId'], // From App Data
-        "studentName": student['name'], // From App Data
-        // --- Exam Metadata ---
-        "examId": exam['id'], // From App Data
-        "sessionName": exam['title'], // From App Data
-        "status": "Pending", // From App Data
-        // --- Evaluation / Grading ---
-        "hifzScore": "0", // From App Data
-        "tajweedGrade": "X", // From App Data
-        "remarks": "X", // From Publish Result
-        "isGraded": false, // From Publish Result
-      };
-      resultsLogs[exam['id']] = [];
-      resultsLogs[exam['id']]!.add(newentrie);
-      debugPrint("Added: $newentrie");
-    });
+    // getStudents().forEach((student) {
+    //   Map<String, dynamic> newentrie = {
+    //     // --- Student Identity ---
+    //     "studentId": student['studentId'], // From App Data
+    //     "studentName": student['name'], // From App Data
+    //     // --- Exam Metadata ---
+    //     "examId": exam['id'], // From App Data
+    //     "sessionName": exam['title'], // From App Data
+    //     "status": "Pending", // From App Data
+    //     "syllabus": "N/A",
+    //     // --- Evaluation / Grading ---
+    //     "hifzScore": "0", // From App Data
+    //     "tajweedGrade": "X", // From App Data
+    //     "remarks": "X", // From Publish Result
+    //     "isGraded": false, // From Publish Result
+    //   };
+    //   resultsLogs[exam['id']] = [];
+    //   resultsLogs[exam['id']]!.add(newentrie);
+    //   debugPrint("Added: $newentrie");
+    // });
 
     _saveToPrefs(_keyExams, exams);
   }
