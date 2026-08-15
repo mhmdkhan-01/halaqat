@@ -46,7 +46,7 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
     for (var exam in allExams) {
       final String examId = exam['id']?.toString() ?? '';
       final String examTitle = exam['title'] ?? 'Exam';
-      final String examDate = exam['date'].toString().split(' ')[0] ?? 'N/A';
+      final String examDate = exam['date'].toString().split(' ')[0];
 
       // Get all results published for this exam
       final Map<String, Map<String, dynamic>> examData =

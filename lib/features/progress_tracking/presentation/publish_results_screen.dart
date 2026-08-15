@@ -12,6 +12,7 @@ class PublishResultsScreen extends StatefulWidget {
 class _PublishResultsScreenState extends State<PublishResultsScreen> {
   late List<Map<String, dynamic>> _exams;
   String? _selectedExamId;
+  // ignore: unused_field
   String? _selectedExamTitle;
   List<Map<String, dynamic>> _students = [];
 
