@@ -24,16 +24,56 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
 
   // Linked mapping key matching our collections
 
+  // --- 1. Updated initState logic ---
   @override
   void initState() {
     super.initState();
-    // Synchronize all dependencies instantly from AppData repository hooks
+    // Synchronize dependencies from AppData repository hooks
     _historyLogs = AppData.getHistoryLogsForStudent(widget.studentId);
     _analytics = AppData.getStudentAnalytics(widget.studentId);
     _calendarAttendance = AppData.getMonthlyCalendarAttendance(
       widget.studentId,
     );
-    _examResults = AppData.getExamResults();
+
+    // Fetch student-specific results across all published exams
+    _loadExamResultsForStudent();
+  }
+
+  void _loadExamResultsForStudent() {
+    final List<Map<String, dynamic>> allExams = AppData.getExams();
+    final List<Map<String, dynamic>> studentExamResults = [];
+
+    for (var exam in allExams) {
+      final String examId = exam['id']?.toString() ?? '';
+      final String examTitle = exam['title'] ?? 'Exam';
+      final String examDate = exam['date'].toString().split(' ')[0] ?? 'N/A';
+
+      // Get all results published for this exam
+      final Map<String, Map<String, dynamic>> examData =
+          AppData.getResultsForExam(examId);
+
+      // Filter to check if a published result exists for this specific student
+      if (examData.containsKey(widget.studentId)) {
+        final studentResult = examData[widget.studentId]!;
+
+        // Include published grades only
+        if (studentResult['isGraded'] == true ||
+            studentResult['status'] == 'Published') {
+          studentExamResults.add({
+            'examName': examTitle,
+            'date': examDate,
+            'hifzScore': studentResult['hifzScore'] ?? '0',
+            'tajweedGrade': studentResult['tajweedGrade'] ?? 'N/A',
+            'syllabus': studentResult['syllabus'] ?? '',
+            'remarks': studentResult['remarks'] ?? '',
+          });
+        }
+      }
+    }
+
+    setState(() {
+      _examResults = studentExamResults;
+    });
   }
 
   @override
@@ -116,24 +156,42 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
             // --- 4. Exam Reports Section ---
             _buildSectionHeader("Exam Reports"),
             const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _examResults.length,
-              itemBuilder: (context, index) {
-                final exam = _examResults[index];
-                return _buildExamCard(
-                  examName:
-                      exam['examName'] ??
-                      "Monthly Hifz Assessment", // dynamic check
-                  date: "June 30, 2026",
-                  grade: exam['tajweedGrade'] ?? "A",
-                  score: exam['hifzScore'] ?? "0/100",
-                  subjectDetails:
-                      "Session Evaluation context: verified standard recitation metrics.",
-                );
-              },
-            ),
+            _examResults.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24.0),
+                      child: Text(
+                        "no_exam_results_found".tr(),
+                        style: const TextStyle(color: Color(0xFF64748B)),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _examResults.length,
+                    itemBuilder: (context, index) {
+                      final exam = _examResults[index];
+                      final String score = exam['hifzScore'].toString();
+                      final String formattedScore = score.contains('/')
+                          ? score
+                          : "$score/100";
+
+                      return _buildExamCard(
+                        examName: exam['examName'] ?? "Hifz Assessment",
+                        date: exam['date'] ?? "N/A",
+                        grade: exam['tajweedGrade'].toString().isEmpty
+                            ? "N/A"
+                            : exam['tajweedGrade'],
+                        score: formattedScore,
+                        subjectDetails: exam['remarks'].toString().isNotEmpty
+                            ? "${'remarks'.tr()}: ${exam['remarks']}"
+                            : (exam['syllabus'].toString().isNotEmpty
+                                  ? "${'syllabus'.tr()}: ${exam['syllabus']}"
+                                  : "no_remarks".tr()),
+                      );
+                    },
+                  ),
           ],
         ),
       ),

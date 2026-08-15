@@ -198,7 +198,20 @@ class AppData {
   //{
   // 'exam name':[ Map<String, dynamic> , Map<String, dynamic>...]
   //}
-  static Map<String, List<Map<String, dynamic>>> resultsLogs = {};
+  static Map<String, Map<String, Map<String, dynamic>>> examResultsByExamId = {
+    "exam_01": {
+      "std_8849204": {
+        "studentId": "std_8849204",
+        "studentName": "Ahmad Muhammad",
+        "hifzScore": "94",
+        "tajweedGrade": "A",
+        "syllabus": "Para 1",
+        "remarks": "Excellent progress",
+        "status": "Published",
+        "isGraded": true,
+      },
+    },
+  };
   // ==========================================
   // SHARED PREFERENCES HELPER METHODS
   // ==========================================
@@ -628,25 +641,25 @@ class AppData {
     return availableSessions;
   }
 
-  static List<Map<String, dynamic>> getExamResults() {
-    return [
-      {
-        // --- Student Identity ---
-        "studentId": "std_8849204", // From App Data
-        "studentName": "Ahmad Muhammad", // From App Data
-        // --- Exam Metadata ---
-        "examId": "exam_01", // From App Data
-        "sessionName": "Term 1 - 2026", // From App Data
-        "status": "Published", // From App Data
-        "syllabus": "Para 1",
-        // --- Evaluation / Grading ---
-        "hifzScore": "94/100", // From App Data
-        "tajweedGrade": "A", // From App Data
-        "remarks": "Excellent", // From Publish Result
-        "isGraded": true, // From Publish Result
-      },
-    ];
-  }
+  // static List<Map<String, dynamic>> getExamResults() {
+  //   return [
+  //     {
+  //       // --- Student Identity ---
+  //       "studentId": "std_8849204", // From App Data
+  //       "studentName": "Ahmad Muhammad", // From App Data
+  //       // --- Exam Metadata ---
+  //       "examId": "exam_01", // From App Data
+  //       "sessionName": "Term 1 - 2026", // From App Data
+  //       "status": "Published", // From App Data
+  //       "syllabus": "Para 1",
+  //       // --- Evaluation / Grading ---
+  //       "hifzScore": "94/100", // From App Data
+  //       "tajweedGrade": "A", // From App Data
+  //       "remarks": "Excellent", // From Publish Result
+  //       "isGraded": true, // From Publish Result
+  //     },
+  //   ];
+  // }
 
   static Map<String, dynamic> getStudentAnalytics(String studentId) {
     int tnp = 0;
@@ -1058,5 +1071,68 @@ class AppData {
       names.add({'id': exam['id'], 'name': '${exam['title']} - $dateString'});
     });
     return names;
+  }
+
+  /// Fetch results for all students in a specific exam
+  static Map<String, Map<String, dynamic>> getResultsForExam(String examId) {
+    return examResultsByExamId[examId] ?? {};
+  }
+
+  /// Fetch a single student's result for a specific exam
+  static Map<String, dynamic>? getStudentResultForExam({
+    required String examId,
+    required String studentId,
+  }) {
+    return examResultsByExamId[examId]?[studentId];
+  }
+
+  /// Save or update a single student's result under a specific exam
+  static void saveStudentResult({
+    required String examId,
+    required String studentId,
+    required Map<String, dynamic> resultData,
+  }) {
+    if (!examResultsByExamId.containsKey(examId)) {
+      examResultsByExamId[examId] = {};
+    }
+    examResultsByExamId[examId]![studentId] = resultData;
+  }
+
+  /// Save multiple student results at once (e.g. Publish All button)
+  static void saveBulkResultsForExam({
+    required String examId,
+    required List<Map<String, dynamic>> studentResults,
+  }) {
+    if (!examResultsByExamId.containsKey(examId)) {
+      examResultsByExamId[examId] = {};
+    }
+
+    for (var result in studentResults) {
+      final String? studentId = result['studentId']?.toString();
+      if (studentId != null && studentId.isNotEmpty) {
+        examResultsByExamId[examId]![studentId] = result;
+      }
+    }
+  }
+
+  /// Fetch all historical exam results for a given student (Parent View)
+  static List<Map<String, dynamic>> getAllResultsForStudent(String studentId) {
+    List<Map<String, dynamic>> history = [];
+    final exams = getExams();
+
+    for (var exam in exams) {
+      final String examId = exam['id'];
+      final String examTitle = exam['title'];
+
+      final examMap = examResultsByExamId[examId];
+      if (examMap != null && examMap.containsKey(studentId)) {
+        final result = examMap[studentId]!;
+        if (result['isGraded'] == true) {
+          history.add({...result, "examTitle": examTitle});
+        }
+      }
+    }
+
+    return history;
   }
 }

@@ -10,34 +10,46 @@ class PublishResultsScreen extends StatefulWidget {
 }
 
 class _PublishResultsScreenState extends State<PublishResultsScreen> {
-  // Mock Scheduled Exams
-  final List<Map<String, dynamic>> _exams = AppData.getExams();
-  String? _selectedExam;
-  // Mock Student List with grading fields
-  final List<Map<String, dynamic>> _students = [
-    {
-      // --- Student Identity ---
-      "studentId": "std_8849204", // From App Data
-      "studentName": "Ahmad Muhammad", // From App Data
-      // --- Exam Metadata ---
-      "examId": "exam_01", // From App Data
-      "sessionName": "Term 1 - 2026", // From App Data
-      "status": "Published", // From App Data
-      "syllabus": "Para 1",
-      // --- Evaluation / Grading ---
-      "hifzScore": "94", // From App Data
-      "tajweedGrade": "A", // From App Data
-      "remarks": "Excellent", // From Publish Result
-      "isGraded": true, // From Publish Result
-    },
-  ];
+  late List<Map<String, dynamic>> _exams;
+  String? _selectedExamId;
+  String? _selectedExamTitle;
+  List<Map<String, dynamic>> _students = [];
 
   @override
   void initState() {
     super.initState();
+    _exams = AppData.getExams();
     if (_exams.isNotEmpty) {
-      _selectedExam = _exams[0]['title'];
+      _selectedExamId = _exams[0]['id']?.toString();
+      _selectedExamTitle = _exams[0]['title']?.toString();
+      _loadStudentsForExam(_selectedExamId);
     }
+  }
+
+  void _loadStudentsForExam(String? examId) {
+    if (examId == null) return;
+
+    // Fetch existing results directly using AppData getter
+    final examData = AppData.getResultsForExam(examId);
+
+    setState(() {
+      _students = AppData.students.map((student) {
+        final String sId = student['studentId']?.toString() ?? '';
+        final Map<String, dynamic>? existingLog = examData[sId];
+
+        return {
+          "studentId": sId,
+          "studentName": student['name'] ?? '',
+          "examId": examId,
+          "status": existingLog?['status'] ?? "Pending",
+          "syllabus": existingLog?['syllabus'] ?? "",
+          "hifzScore": existingLog?['hifzScore'] ?? "",
+          "tajweedGrade": existingLog?['tajweedGrade'] ?? "",
+          "remarks": existingLog?['remarks'] ?? "",
+          "isGraded": existingLog?['isGraded'] ?? false,
+        };
+      }).toList();
+    });
   }
 
   @override
@@ -81,19 +93,20 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      value: _selectedExam,
+                      value: _selectedExamId,
                       isExpanded: true,
                       icon: const Icon(
                         Icons.keyboard_arrow_down_rounded,
                         color: Color(0xFF0A5C36),
                       ),
                       items: _exams.map<DropdownMenuItem<String>>((exam) {
-                        final String examName = exam['title']?.toString() ?? '';
+                        final String id = exam['id']?.toString() ?? '';
+                        final String title = exam['title']?.toString() ?? '';
 
                         return DropdownMenuItem<String>(
-                          value: examName,
+                          value: id,
                           child: Text(
-                            examName,
+                            title,
                             style: const TextStyle(
                               color: Color(0xFF1E293B),
                               fontWeight: FontWeight.w600,
@@ -103,9 +116,17 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                         );
                       }).toList(),
                       onChanged: (String? val) {
+                        if (val == null) return;
+                        final selectedExam = _exams.firstWhere(
+                          (e) => e['id'].toString() == val,
+                          orElse: () => {},
+                        );
                         setState(() {
-                          _selectedExam = val;
+                          _selectedExamId = val;
+                          _selectedExamTitle = selectedExam['title']
+                              ?.toString();
                         });
+                        _loadStudentsForExam(val);
                       },
                     ),
                   ),
@@ -141,7 +162,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
               ),
               elevation: 0,
             ),
-            onPressed: () => _publishAllResults(),
+            onPressed: _publishAllResults,
             icon: const Icon(Icons.cloud_upload_rounded),
             label: Text(
               "publish_to_parents".tr(),
@@ -154,7 +175,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
   }
 
   Widget _buildStudentGradingCard(Map<String, dynamic> student, int index) {
-    final bool hasGrade = student['isGraded'];
+    final bool hasGrade = student['isGraded'] == true;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -196,9 +217,11 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "Tap To Mark Grade",
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
+                      hasGrade ? "Graded" : "Tap To Mark Grade",
+                      style: TextStyle(
+                        color: hasGrade
+                            ? const Color(0xFF0A5C36)
+                            : const Color(0xFF64748B),
                         fontSize: 12,
                       ),
                     ),
@@ -378,14 +401,46 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
               ),
               onPressed: () {
                 if (marksController.text.isNotEmpty) {
+                  int marks = int.tryParse(marksController.text.trim()) ?? 0;
+
+                  // Determine grade based on marks range
+                  String grade;
+                  if (marks >= 85) {
+                    grade = "ممتاز";
+                  } else if (marks >= 75) {
+                    grade = "جيد جدًا";
+                  } else if (marks >= 65) {
+                    grade = "جيد";
+                  } else if (marks >= 50) {
+                    grade = "مقبول";
+                  } else if (marks >= 30) {
+                    grade = "ضعيف";
+                  } else {
+                    grade = "ضعيف جدًا";
+                  }
+                  final updatedStudent = {
+                    ...student,
+                    "hifzScore": marksController.text,
+                    "tajweedGrade": grade,
+                    "syllabus": syllabusController.text,
+                    "remarks": remarksController.text,
+                    "status": "Published",
+                    "isGraded": true,
+                  };
+
                   setState(() {
-                    _students[index] = {
-                      ...student,
-                      "hifzScore": marksController.text,
-                      "remarks": remarksController.text,
-                      "isGraded": true,
-                    };
+                    _students[index] = updatedStudent;
                   });
+
+                  // Immediately persist single edit to AppData memory
+                  if (_selectedExamId != null) {
+                    AppData.saveStudentResult(
+                      examId: _selectedExamId!,
+                      studentId: student['studentId'].toString(),
+                      resultData: updatedStudent,
+                    );
+                  }
+
                   Navigator.pop(context);
                 }
               },
@@ -398,10 +453,11 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
   }
 
   void _publishAllResults() {
-    // Basic validation check to verify grades are present
-    final gradedCount = _students.where((s) => s['isGraded']).length;
+    final gradedStudents = _students
+        .where((s) => s['isGraded'] == true)
+        .toList();
 
-    if (gradedCount == 0) {
+    if (gradedStudents.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("grade_at_least_one_student".tr()),
@@ -417,7 +473,10 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
         title: Text("publish_results_confirm".tr()),
         content: Text(
           "publish_results_desc".tr(
-            args: [gradedCount.toString(), _students.length.toString()],
+            args: [
+              gradedStudents.length.toString(),
+              _students.length.toString(),
+            ],
           ),
         ),
         actions: [
@@ -430,6 +489,14 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
           ),
           TextButton(
             onPressed: () {
+              if (_selectedExamId != null) {
+                // Bulk save graded results directly via AppData helper function
+                AppData.saveBulkResultsForExam(
+                  examId: _selectedExamId!,
+                  studentResults: gradedStudents,
+                );
+              }
+
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
