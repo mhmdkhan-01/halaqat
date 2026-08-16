@@ -280,7 +280,8 @@ class AppData {
     if (cachedUsers != null) {
       users = cachedUsers;
     }
-    final cachedSubmittedLogs = await loadAttendanceLogs();
+    await loadSubmittedLogs();
+    await loadAttendanceLogs();
   }
 
   static Future<void> loadSubmittedLogs() async {
