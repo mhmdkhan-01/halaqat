@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:halaqat/features/admin_portal/presentation/backup_restore_screen.dart';
@@ -12,7 +9,6 @@ import 'package:halaqat/features/progress_tracking/presentation/publish_results_
 import 'package:halaqat/features/student_management/presentation/manage_users_screen.dart';
 import 'package:halaqat/features/progress_tracking/presentation/manage_sessions_screen.dart';
 import 'package:halaqat/features/progress_tracking/presentation/exam_management_screen.dart';
-import 'package:path_provider/path_provider.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
