@@ -713,7 +713,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                         builder: (context) => AlertDialog(
                           title: const Text("Export Backup?"),
                           content: const Text(
-                            "This will save a JSON backup file of all system records to your device.",
+                            "This will save a JSON backup file of all system records to app storage.",
                           ),
                           actions: [
                             TextButton(
@@ -749,9 +749,9 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
 
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Backup exported to: ${file.path}"),
-                              backgroundColor: const Color(0xFF0A5C36),
+                            const SnackBar(
+                              content: Text("Backup created successfully!"),
+                              backgroundColor: Color(0xFF0A5C36),
                             ),
                           );
                         } catch (e) {
@@ -768,7 +768,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                   ),
                   const Divider(height: 1, indent: 56),
 
-                  // Import Data ListTile
+                  // Import Data ListTile (Automatically restores the latest backup file)
                   ListTile(
                     leading: const Icon(
                       Icons.cloud_download_outlined,
@@ -788,22 +788,12 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                       color: Color(0xFF94A3B8),
                     ),
                     onTap: () async {
-                      final result = await FilePicker.pickFiles(
-                        type: FileType.custom,
-                        allowedExtensions: ['json'],
-                      );
-
-                      if (result == null || result.single.path == null) {
-                        return;
-                      }
-
-                      if (!context.mounted) return;
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text("Overwrite Current Data?"),
+                          title: const Text("Restore Latest Backup?"),
                           content: const Text(
-                            "Importing this file will overwrite existing in-memory and saved records. Are you sure?",
+                            "This will scan app storage and overwrite existing records with the most recent backup. Are you sure?",
                           ),
                           actions: [
                             TextButton(
@@ -816,7 +806,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                                 foregroundColor: Colors.white,
                               ),
                               onPressed: () => Navigator.pop(context, true),
-                              child: const Text("Overwrite & Restore"),
+                              child: const Text("Restore"),
                             ),
                           ],
                         ),
@@ -824,8 +814,44 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
 
                       if (confirm == true) {
                         try {
-                          final file = File(result.single.path!);
-                          final jsonContent = await file.readAsString();
+                          final directory =
+                              await getApplicationDocumentsDirectory();
+                          final List<FileSystemEntity> entities = directory
+                              .listSync();
+
+                          // 1. Filter files starting with halaqat_backup_ and ending in .json
+                          final List<File> backupFiles = entities
+                              .whereType<File>()
+                              .where((file) {
+                                final name = file.path
+                                    .split(Platform.pathSeparator)
+                                    .last;
+                                return name.startsWith('halaqat_backup_') &&
+                                    name.endsWith('.json');
+                              })
+                              .toList();
+
+                          if (backupFiles.isEmpty) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("No backup files found."),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                            return;
+                          }
+
+                          // 2. Sort by last modified date (newest first)
+                          backupFiles.sort(
+                            (a, b) => b.lastModifiedSync().compareTo(
+                              a.lastModifiedSync(),
+                            ),
+                          );
+                          final File latestFile = backupFiles.first;
+
+                          // 3. Read and restore
+                          final jsonContent = await latestFile.readAsString();
                           final success = await AppData.importDataFromJson(
                             jsonContent,
                           );
@@ -835,7 +861,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                             SnackBar(
                               content: Text(
                                 success
-                                    ? "Data restored successfully!"
+                                    ? "Restored: ${latestFile.path.split(Platform.pathSeparator).last}"
                                     : "Invalid backup file format.",
                               ),
                               backgroundColor: success

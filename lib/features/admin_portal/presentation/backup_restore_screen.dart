@@ -32,7 +32,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     return backupDir;
   }
 
-  /// EXPORT: Saves file automatically to Download/halaqatbackups/
+  /// EXPORT: Saves file automatically to app's internal documents directory
   Future<void> _exportBackup() async {
     try {
       final String jsonContent = await AppData.exportDataToJson();
@@ -49,14 +49,14 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       await targetFile.writeAsString(jsonContent);
 
       if (!mounted) return;
-      _showSnackBar("Backup saved to Download/halaqatbackups/", isError: false);
+      _showSnackBar("Backup created successfully!", isError: false);
     } catch (e) {
       if (!mounted) return;
       _showSnackBar("Export failed: $e", isError: true);
     }
   }
 
-  /// IMPORT: Reads the latest .json file from Download/halaqatbackups/
+  /// IMPORT: Reads the latest backup from app's internal documents directory
   Future<void> _importBackup() async {
     setState(() {
       _isProcessing = true;
@@ -65,23 +65,26 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     try {
       final Directory dir = await _getHalaqatBackupDir();
 
-      // List all files inside Download/halaqatbackups/
-      final List<FileSystemEntity> entities = dir.listSync();
-      final List<File> jsonFiles = entities
-          .whereType<File>()
-          .where((file) => file.path.endsWith('.json'))
-          .toList();
-
-      if (jsonFiles.isEmpty) {
+      if (!await dir.exists()) {
         if (!mounted) return;
-        _showSnackBar(
-          "No backup files found in Download/halaqatbackups/",
-          isError: true,
-        );
+        _showSnackBar("Backup directory does not exist.", isError: true);
         return;
       }
 
-      // Sort files by modified date to grab the latest one
+      final List<FileSystemEntity> entities = dir.listSync();
+      final List<File> jsonFiles = entities.whereType<File>().where((file) {
+        final fileName = file.path.split(Platform.pathSeparator).last;
+        return fileName.startsWith('halaqat_backup_') &&
+            fileName.endsWith('.json');
+      }).toList();
+
+      if (jsonFiles.isEmpty) {
+        if (!mounted) return;
+        _showSnackBar("No backup files found in storage.", isError: true);
+        return;
+      }
+
+      // Sort by last modified timestamp (newest first)
       jsonFiles.sort(
         (a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()),
       );
@@ -95,10 +98,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
       if (!mounted) return;
       if (success) {
-        _showSnackBar(
-          "Restored from: ${latestBackup.path.split('/').last}",
-          isError: false,
-        );
+        final fileName = latestBackup.path.split(Platform.pathSeparator).last;
+        _showSnackBar("Restored from: $fileName", isError: false);
       } else {
         _showSnackBar("Invalid backup file format.", isError: true);
       }
