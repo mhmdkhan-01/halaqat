@@ -17,6 +17,7 @@ class AppData {
   static const String _keyRole = "cached_role";
   static const String _keyIsLoggedIn = "cached_IsLoggedIn";
   static const String _keyExams = "cashed_exams";
+  static const String _keysubmittedProgressLogs = "cached_submitted_logs";
   //for attendance tab to see if already submitted or not
   static Map<String, Set<String>> submittedSessions = {};
   //for daily entery screen to see if progress log is already submitted or not
@@ -224,6 +225,7 @@ class AppData {
   static Future<List<Map<String, dynamic>>?> _getFromPrefs(String key) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(key);
+
     if (jsonString != null && jsonString.isNotEmpty) {
       final List decoded = jsonDecode(jsonString);
       return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
@@ -278,38 +280,48 @@ class AppData {
     if (cachedUsers != null) {
       users = cachedUsers;
     }
-    await loadAttendanceLogs();
+    final cachedSubmittedLogs = await loadAttendanceLogs();
+  }
+
+  static Future<void> loadSubmittedLogs() async {
+    final sp = await SharedPreferences.getInstance();
+    String raw = sp.getString(_keysubmittedProgressLogs) ?? "";
+    if (raw.isNotEmpty) {
+      submittedProgressLogs = jsonDecode(raw) as Map<String, Set<String>>;
+    } else {
+      submittedProgressLogs = {};
+    }
   }
 
   static Future<void> loadAttendanceLogs() async {
-    // 1. Get raw string or object from prefs
-    final dynamic rawData = await _getFromPrefs(_keyAttendanceLogs);
+    final sp = await SharedPreferences.getInstance();
+    final String? rawData = sp.getString(_keyAttendanceLogs);
 
-    // 2. If it's stored as a JSON string, decode it first
-    final Map<String, dynamic>? cachedAttendanceLogs = (rawData is String)
-        ? jsonDecode(rawData) as Map<String, dynamic>?
-        : rawData as Map<String, dynamic>?;
+    if (rawData != null && rawData.isNotEmpty) {
+      try {
+        final Map<String, dynamic> decodedData = jsonDecode(rawData);
 
-    if (cachedAttendanceLogs != null) {
-      _attendanceLogs.clear();
+        _attendanceLogs.clear();
 
-      cachedAttendanceLogs.forEach((date, sessions) {
-        if (sessions is Map) {
-          final Map<String, Map<String, String>> parsedSessions = {};
+        decodedData.forEach((date, sessions) {
+          if (sessions is Map) {
+            final Map<String, Map<String, String>> parsedSessions = {};
 
-          sessions.forEach((sessionName, students) {
-            if (students is Map) {
-              // Safely map student IDs to statuses
-              parsedSessions[sessionName.toString()] = students.map(
-                (studentId, status) =>
-                    MapEntry(studentId.toString(), status.toString()),
-              );
-            }
-          });
+            sessions.forEach((sessionName, students) {
+              if (students is Map) {
+                parsedSessions[sessionName.toString()] = students.map(
+                  (studentId, status) =>
+                      MapEntry(studentId.toString(), status.toString()),
+                );
+              }
+            });
 
-          _attendanceLogs[date.toString()] = parsedSessions;
-        }
-      });
+            _attendanceLogs[date.toString()] = parsedSessions;
+          }
+        });
+      } catch (e) {
+        print("Failed to parse attendance logs: $e");
+      }
     }
   }
 
@@ -668,7 +680,9 @@ class AppData {
     ).toList();
     studentLogs.forEach((log) {
       if (log['sabaq'] != null && log['sabaq']['lines'] != null) {
-        tnp += log['sabaq']['lines'] as int;
+        tnp += (log['sabaq']['lines'] is String)
+            ? int.parse(log['sabaq']['lines'])
+            : log['sabaq']['lines'] as int;
       }
     });
     double totalNewPages = tnp / 16;
@@ -676,7 +690,8 @@ class AppData {
     double totalParas = 30;
     studentLogs.forEach((log) {
       if (log['sabaq'] != null && log['sabaq']['para'] != null) {
-        hifzProgressPercent += (log['sabaq']['para'] as int) / totalParas;
+        hifzProgressPercent +=
+            (int.parse(log['sabaq']['para'].toString())) / totalParas;
       }
     });
     int totalClasses = _attendanceLogs.length;
@@ -848,7 +863,9 @@ class AppData {
       if (studentLogs.isNotEmpty) {
         final latestLog = studentLogs.last;
         if (latestLog['sabaq'] != null && latestLog['sabaq']['para'] != null) {
-          latestPara = latestLog['sabaq']['para'];
+          latestPara = (latestLog['sabaq']['para'] is String)
+              ? int.parse(latestLog['sabaq']['para'])
+              : latestLog['sabaq']['para'];
         }
       }
 
@@ -876,15 +893,18 @@ class AppData {
       final String dateKey =
           "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
-      // Ensure the date entry exists
-      _attendanceLogs.putIfAbsent(dateKey, () => {});
+      // 1. Ensure the date entry exists in the parent map
+      _attendanceLogs[dateKey] ??= {};
 
-      // For each active session submitted, record the attendance snapshot
+      // 2. Safely merge student attendance for each session without losing other sessions
       for (var session in sessionNames) {
         _attendanceLogs[dateKey]![session] = Map<String, String>.from(
           studentAttendance,
         );
       }
+
+      // 3. Persist to SharedPreferences (convert to JSON string if required by your helper)
+      // If _saveToPrefs expects a String, use jsonEncode:
       await _saveToPrefs(_keyAttendanceLogs, _attendanceLogs);
 
       // Debug log to verify structure in console
@@ -961,11 +981,16 @@ class AppData {
     return submittedSessions[date] ?? {};
   }
 
-  static void submitProgressLogForDate(String date, String studentId) {
+  static Future<void> submitProgressLogForDate(
+    String date,
+    String studentId,
+  ) async {
     if (!submittedProgressLogs.containsKey(date)) {
       submittedProgressLogs[date] = {};
     }
     submittedProgressLogs[date]!.add(studentId);
+    var sp = await SharedPreferences.getInstance();
+    sp.setString(_keysubmittedProgressLogs, jsonEncode(submittedProgressLogs));
   }
 
   static bool isProgressLogSubmitted(String date, String studentId) {

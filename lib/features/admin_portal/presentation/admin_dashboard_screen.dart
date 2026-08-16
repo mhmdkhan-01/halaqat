@@ -23,7 +23,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     const AdminHomeTab(),
     const ManageUsersTab(),
     const ManageAcademicTab(),
-    const AdminLogoutScreen(), // Added Logout Screen
+    const AdminSettingsTab(), // Added Logout Screen
   ];
 
   @override
@@ -55,8 +55,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             label: 'academic'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.logout_rounded),
-            label: 'logout'.tr(),
+            icon: const Icon(Icons.settings_sharp),
+            label: 'settings'.tr(),
           ),
         ],
       ),
@@ -572,29 +572,143 @@ class ManageAcademicTab extends StatelessWidget {
   }
 }
 
-class AdminLogoutScreen extends StatelessWidget {
-  const AdminLogoutScreen({super.key});
+// ================= Tab 3: Settings =================
+class AdminSettingsTab extends StatefulWidget {
+  const AdminSettingsTab({super.key});
+
+  @override
+  State<AdminSettingsTab> createState() => _AdminSettingsTabState();
+}
+
+class _AdminSettingsTabState extends State<AdminSettingsTab> {
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("logout".tr()),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF1E293B),
-      ),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () async {
-            await AppData.clearLoginInfo(); // Clear login info from local storage
-            // Implement logout logic here
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-            );
-          },
-          child: Text("logout".tr()),
+      backgroundColor: const Color(0xFFF6F8F6),
+      appBar: AppBar(title: Text('settings'.tr())),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: const Color(0xFF0A5C36),
+                    child: Text(
+                      "A",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    "Admin",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.015),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(
+                      Icons.language,
+                      color: Color(0xFF0A5C36),
+                    ),
+                    title: const Text(
+                      "Language / زبان",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    trailing: Text(
+                      context.locale == const Locale('en') ? "English" : "اردو",
+                      style: const TextStyle(
+                        color: Color(0xFF0A5C36),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onTap: () {
+                      if (context.locale == const Locale('en')) {
+                        context.setLocale(const Locale('ur'));
+                      } else {
+                        context.setLocale(const Locale('en'));
+                      }
+                    },
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Color(0xFF0A5C36)),
+                    title: const Text(
+                      "Log Out",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    onTap: () async {
+                      // Handle log out
+                      await AppData.clearLoginInfo();
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

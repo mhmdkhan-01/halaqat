@@ -33,7 +33,6 @@ class _AttendanceTabState extends State<AttendanceTab> {
   Future<Map<String, dynamic>> fetchScreenData() async {
     final rawSessions = AppData.getSessions();
     final rawStudents = AppData.getStudents();
-
     // Cast explicitly
     _availableSessions = List<Map<String, dynamic>>.from(rawSessions);
     _students = List<Map<String, dynamic>>.from(rawStudents);
@@ -79,7 +78,10 @@ class _AttendanceTabState extends State<AttendanceTab> {
                       final isSelected = _selectedSessions.contains(
                         sessionName,
                       );
-                      final isLocked = _submittedSessions.contains(sessionName);
+                      final isLocked = AppData.isSessionSubmitted(
+                        DateTime.now().toString().split(' ')[0],
+                        sessionName,
+                      );
 
                       return CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
