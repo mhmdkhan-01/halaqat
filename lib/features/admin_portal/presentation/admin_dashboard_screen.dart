@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
@@ -8,6 +11,7 @@ import 'package:halaqat/features/progress_tracking/presentation/publish_results_
 import 'package:halaqat/features/student_management/presentation/manage_users_screen.dart';
 import 'package:halaqat/features/progress_tracking/presentation/manage_sessions_screen.dart';
 import 'package:halaqat/features/progress_tracking/presentation/exam_management_screen.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -572,6 +576,10 @@ class ManageAcademicTab extends StatelessWidget {
   }
 }
 
+// Ensure your project model paths match these imports
+// import 'path/to/app_data.dart';
+// import 'path/to/login_screen.dart';
+
 // ================= Tab 3: Settings =================
 class AdminSettingsTab extends StatefulWidget {
   const AdminSettingsTab({super.key});
@@ -583,7 +591,6 @@ class AdminSettingsTab extends StatefulWidget {
 class _AdminSettingsTabState extends State<AdminSettingsTab> {
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
   }
 
@@ -610,10 +617,10 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                 ],
               ),
               child: Row(
-                children: [
+                children: const [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor: const Color(0xFF0A5C36),
+                    backgroundColor: Color(0xFF0A5C36),
                     child: Text(
                       "A",
                       style: TextStyle(
@@ -623,7 +630,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   Text(
                     "Admin",
                     style: TextStyle(
@@ -650,6 +657,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
               ),
               child: Column(
                 children: [
+                  // Language ListTile
                   ListTile(
                     leading: const Icon(
                       Icons.language,
@@ -679,6 +687,177 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                     },
                   ),
                   const Divider(height: 1, indent: 56),
+
+                  // Export Data ListTile
+                  ListTile(
+                    leading: const Icon(
+                      Icons.cloud_upload_outlined,
+                      color: Color(0xFF0A5C36),
+                    ),
+                    title: const Text(
+                      "Export Data",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    onTap: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text("Export Backup?"),
+                          content: const Text(
+                            "This will save a JSON backup file of all system records to your device.",
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text("Cancel"),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0A5C36),
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text("Export"),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        try {
+                          final jsonContent = await AppData.exportDataToJson();
+                          final directory =
+                              await getApplicationDocumentsDirectory();
+                          final timestamp = DateTime.now()
+                              .toIso8601String()
+                              .replaceAll(':', '-')
+                              .split('.')
+                              .first;
+                          final file = File(
+                            '${directory.path}/halaqat_backup_$timestamp.json',
+                          );
+                          await file.writeAsString(jsonContent);
+
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Backup exported to: ${file.path}"),
+                              backgroundColor: const Color(0xFF0A5C36),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Export failed: $e"),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  const Divider(height: 1, indent: 56),
+
+                  // Import Data ListTile
+                  ListTile(
+                    leading: const Icon(
+                      Icons.cloud_download_outlined,
+                      color: Color(0xFF0A5C36),
+                    ),
+                    title: const Text(
+                      "Import Data",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    onTap: () async {
+                      final result = await FilePicker.pickFiles(
+                        type: FileType.custom,
+                        allowedExtensions: ['json'],
+                      );
+
+                      if (result == null || result.single.path == null) {
+                        return;
+                      }
+
+                      if (!context.mounted) return;
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text("Overwrite Current Data?"),
+                          content: const Text(
+                            "Importing this file will overwrite existing in-memory and saved records. Are you sure?",
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text("Cancel"),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text("Overwrite & Restore"),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        try {
+                          final file = File(result.single.path!);
+                          final jsonContent = await file.readAsString();
+                          final success = await AppData.importDataFromJson(
+                            jsonContent,
+                          );
+
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                success
+                                    ? "Data restored successfully!"
+                                    : "Invalid backup file format.",
+                              ),
+                              backgroundColor: success
+                                  ? const Color(0xFF0A5C36)
+                                  : Colors.redAccent,
+                            ),
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Import failed: $e"),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  const Divider(height: 1, indent: 56),
+
+                  // Log Out ListTile
                   ListTile(
                     leading: const Icon(Icons.logout, color: Color(0xFF0A5C36)),
                     title: const Text(
@@ -695,8 +874,8 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                       color: Color(0xFF94A3B8),
                     ),
                     onTap: () async {
-                      // Handle log out
                       await AppData.clearLoginInfo();
+                      if (!context.mounted) return;
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(

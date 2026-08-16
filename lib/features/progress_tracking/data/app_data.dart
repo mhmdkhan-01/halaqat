@@ -1161,4 +1161,159 @@ class AppData {
 
     return history;
   }
+
+  // ---------- import exrot functions ----------------//
+  static Future<String> exportDataToJson() async {
+    final sp = await SharedPreferences.getInstance();
+
+    final Map<String, dynamic> backupPayload = {
+      "version": 1,
+      "exportedAt": DateTime.now().toIso8601String(),
+      "data": {
+        "students": AppData.students,
+        "users": AppData.users,
+        "sessions": AppData.availableSessions,
+        "progressLogs": AppData.ProgressLogs,
+        "exams": AppData.exams.map((e) {
+          final copy = Map<String, dynamic>.from(e);
+          if (copy['date'] is DateTime) {
+            copy['date'] = (copy['date'] as DateTime).toIso8601String();
+          }
+          return copy;
+        }).toList(),
+        "examResultsByExamId": AppData.examResultsByExamId,
+        "attendanceLogs": sp.getString(AppData._keyAttendanceLogs) != null
+            ? jsonDecode(sp.getString(AppData._keyAttendanceLogs)!)
+            : {},
+        "submittedSessions": AppData.submittedSessions.map(
+          (key, value) => MapEntry(key, value.toList()),
+        ),
+        "submittedProgressLogs": AppData.submittedProgressLogs.map(
+          (key, value) => MapEntry(key, value.toList()),
+        ),
+      },
+    };
+
+    return const JsonEncoder.withIndent('  ').convert(backupPayload);
+  }
+
+  // 2. Import structured JSON string back into memory & SharedPreferences
+  static Future<bool> importDataFromJson(String jsonStr) async {
+    try {
+      final Map<String, dynamic> decoded = jsonDecode(jsonStr);
+      final Map<String, dynamic> data = decoded['data'] ?? decoded;
+
+      final sp = await SharedPreferences.getInstance();
+
+      // Clear existing memory lists
+      AppData.students.clear();
+      AppData.users.clear();
+      AppData.availableSessions.clear();
+      AppData.ProgressLogs.clear();
+      AppData.exams.clear();
+      AppData.examResultsByExamId.clear();
+      AppData.submittedSessions.clear();
+      AppData.submittedProgressLogs.clear();
+
+      // Populate Students
+      if (data['students'] is List) {
+        AppData.students.addAll(
+          List<Map<String, dynamic>>.from(data['students']),
+        );
+        await sp.setString(AppData._keyStudents, jsonEncode(AppData.students));
+      }
+
+      // Populate Users
+      if (data['users'] is List) {
+        AppData.users.addAll(List<Map<String, dynamic>>.from(data['users']));
+        await sp.setString(AppData._keyUsers, jsonEncode(AppData.users));
+      }
+
+      // Populate Sessions
+      if (data['sessions'] is List) {
+        AppData.availableSessions.addAll(
+          List<Map<String, dynamic>>.from(data['sessions']),
+        );
+        await sp.setString(
+          AppData._keySessions,
+          jsonEncode(AppData.availableSessions),
+        );
+      }
+
+      // Populate Progress Logs
+      if (data['progressLogs'] is List) {
+        AppData.ProgressLogs.addAll(
+          List<Map<String, dynamic>>.from(data['progressLogs']),
+        );
+        await sp.setString(
+          AppData._keyProgressLogs,
+          jsonEncode(AppData.ProgressLogs),
+        );
+      }
+
+      // Populate Exams
+      if (data['exams'] is List) {
+        for (var e in data['exams']) {
+          final map = Map<String, dynamic>.from(e);
+          if (map['date'] is String) {
+            map['date'] = DateTime.tryParse(map['date']) ?? DateTime.now();
+          }
+          AppData.exams.add(map);
+        }
+        await sp.setString(AppData._keyExams, jsonEncode(data['exams']));
+      }
+
+      // Populate Exam Results
+      if (data['examResultsByExamId'] is Map) {
+        final rawResults = data['examResultsByExamId'] as Map<String, dynamic>;
+        rawResults.forEach((examId, studentMap) {
+          if (studentMap is Map) {
+            AppData.examResultsByExamId[examId] = {};
+            studentMap.forEach((stdId, log) {
+              if (log is Map) {
+                AppData.examResultsByExamId[examId]![stdId] =
+                    Map<String, dynamic>.from(log);
+              }
+            });
+          }
+        });
+      }
+
+      // Populate Attendance Logs
+      if (data['attendanceLogs'] is Map) {
+        await sp.setString(
+          AppData._keyAttendanceLogs,
+          jsonEncode(data['attendanceLogs']),
+        );
+        await AppData.loadAttendanceLogs();
+      }
+
+      // Populate Submitted Sessions
+      if (data['submittedSessions'] is Map) {
+        (data['submittedSessions'] as Map).forEach((key, val) {
+          if (val is List) {
+            AppData.submittedSessions[key.toString()] = Set<String>.from(
+              val.map((e) => e.toString()),
+            );
+          }
+        });
+      }
+
+      // Populate Submitted Progress Logs
+      if (data['submittedProgressLogs'] is Map) {
+        (data['submittedProgressLogs'] as Map).forEach((key, val) {
+          if (val is List) {
+            AppData.submittedProgressLogs[key.toString()] = Set<String>.from(
+              val.map((e) => e.toString()),
+            );
+          }
+        });
+      }
+
+      return true;
+    } catch (e) {
+      print("Error restoring data: $e");
+      return false;
+    }
+  }
 }
