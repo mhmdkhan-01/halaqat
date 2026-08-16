@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:halaqat/features/admin_portal/presentation/backup_restore_screen.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
 import 'package:halaqat/features/progress_tracking/data/app_data.dart';
 import 'package:halaqat/features/progress_tracking/presentation/publish_results_screen.dart';
@@ -686,96 +687,17 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                       }
                     },
                   ),
-                  const Divider(height: 1, indent: 56),
 
-                  // Export Data ListTile
-                  ListTile(
-                    leading: const Icon(
-                      Icons.cloud_upload_outlined,
-                      color: Color(0xFF0A5C36),
-                    ),
-                    title: const Text(
-                      "Export Data",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    trailing: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 14,
-                      color: Color(0xFF94A3B8),
-                    ),
-                    onTap: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text("Export Backup?"),
-                          content: const Text(
-                            "This will save a JSON backup file of all system records to app storage.",
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text("Cancel"),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0A5C36),
-                                foregroundColor: Colors.white,
-                              ),
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text("Export"),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (confirm == true) {
-                        try {
-                          final jsonContent = await AppData.exportDataToJson();
-                          final directory =
-                              await getApplicationDocumentsDirectory();
-                          final timestamp = DateTime.now()
-                              .toIso8601String()
-                              .replaceAll(':', '-')
-                              .split('.')
-                              .first;
-                          final file = File(
-                            '${directory.path}/halaqat_backup_$timestamp.json',
-                          );
-                          await file.writeAsString(jsonContent);
-
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Backup created successfully!"),
-                              backgroundColor: Color(0xFF0A5C36),
-                            ),
-                          );
-                        } catch (e) {
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Export failed: $e"),
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                  ),
                   const Divider(height: 1, indent: 56),
 
                   // Import Data ListTile (Automatically restores the latest backup file)
                   ListTile(
                     leading: const Icon(
-                      Icons.cloud_download_outlined,
+                      Icons.cloud_sync,
                       color: Color(0xFF0A5C36),
                     ),
                     title: const Text(
-                      "Import Data",
+                      "Import/Export Data",
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
@@ -788,97 +710,12 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                       color: Color(0xFF94A3B8),
                     ),
                     onTap: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text("Restore Latest Backup?"),
-                          content: const Text(
-                            "This will scan app storage and overwrite existing records with the most recent backup. Are you sure?",
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text("Cancel"),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent,
-                                foregroundColor: Colors.white,
-                              ),
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text("Restore"),
-                            ),
-                          ],
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BackupRestoreScreen(),
                         ),
                       );
-
-                      if (confirm == true) {
-                        try {
-                          final directory =
-                              await getApplicationDocumentsDirectory();
-                          final List<FileSystemEntity> entities = directory
-                              .listSync();
-
-                          // 1. Filter files starting with halaqat_backup_ and ending in .json
-                          final List<File> backupFiles = entities
-                              .whereType<File>()
-                              .where((file) {
-                                final name = file.path
-                                    .split(Platform.pathSeparator)
-                                    .last;
-                                return name.startsWith('halaqat_backup_') &&
-                                    name.endsWith('.json');
-                              })
-                              .toList();
-
-                          if (backupFiles.isEmpty) {
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("No backup files found."),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
-                            return;
-                          }
-
-                          // 2. Sort by last modified date (newest first)
-                          backupFiles.sort(
-                            (a, b) => b.lastModifiedSync().compareTo(
-                              a.lastModifiedSync(),
-                            ),
-                          );
-                          final File latestFile = backupFiles.first;
-
-                          // 3. Read and restore
-                          final jsonContent = await latestFile.readAsString();
-                          final success = await AppData.importDataFromJson(
-                            jsonContent,
-                          );
-
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success
-                                    ? "Restored: ${latestFile.path.split(Platform.pathSeparator).last}"
-                                    : "Invalid backup file format.",
-                              ),
-                              backgroundColor: success
-                                  ? const Color(0xFF0A5C36)
-                                  : Colors.redAccent,
-                            ),
-                          );
-                        } catch (e) {
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Import failed: $e"),
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
-                        }
-                      }
                     },
                   ),
                   const Divider(height: 1, indent: 56),

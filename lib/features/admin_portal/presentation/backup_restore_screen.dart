@@ -34,26 +34,26 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
   /// EXPORT: Saves file automatically to app's internal documents directory
   Future<void> _exportBackup() async {
-    try {
-      final String jsonContent = await AppData.exportDataToJson();
-      final String timestamp = DateTime.now()
-          .toIso8601String()
-          .replaceAll(':', '-')
-          .split('.')
-          .first;
-      final String fileName = 'halaqat_backup_$timestamp.json';
+    // try {
+    final String jsonContent = await AppData.exportDataToJson();
+    final String timestamp = DateTime.now()
+        .toIso8601String()
+        .replaceAll(':', '-')
+        .split('.')
+        .first;
+    final String fileName = 'halaqat_backup_$timestamp.json';
 
-      final Directory dir = await _getHalaqatBackupDir();
-      final File targetFile = File('${dir.path}/$fileName');
+    final Directory dir = await _getHalaqatBackupDir();
+    final File targetFile = File('${dir.path}/$fileName');
 
-      await targetFile.writeAsString(jsonContent);
+    await targetFile.writeAsString(jsonContent);
 
-      if (!mounted) return;
-      _showSnackBar("Backup created successfully!", isError: false);
-    } catch (e) {
-      if (!mounted) return;
-      _showSnackBar("Export failed: $e", isError: true);
-    }
+    if (!mounted) return;
+    _showSnackBar("Backup created successfully!", isError: false);
+    // } catch (e) {
+    //   if (!mounted) return;
+    //   _showSnackBar("Export failed: $e", isError: true);
+    // }
   }
 
   /// IMPORT: Reads the latest backup from app's internal documents directory

@@ -18,6 +18,8 @@ class AppData {
   static const String _keyIsLoggedIn = "cached_IsLoggedIn";
   static const String _keyExams = "cashed_exams";
   static const String _keysubmittedProgressLogs = "cached_submitted_logs";
+  static const String _keysubmitSessionForDate = "cached_submitSessionForDate";
+  static const String _keyExamResults = "cached_exam_results";
   //for attendance tab to see if already submitted or not
   static Map<String, Set<String>> submittedSessions = {};
   //for daily entery screen to see if progress log is already submitted or not
@@ -213,6 +215,7 @@ class AppData {
       },
     },
   };
+
   // ==========================================
   // SHARED PREFERENCES HELPER METHODS
   // ==========================================
@@ -282,6 +285,30 @@ class AppData {
     }
     await loadSubmittedLogs();
     await loadAttendanceLogs();
+    await loadSubmittedSessions();
+  }
+
+  static Future<void> loadSubmittedSessions() async {
+    final sp = await SharedPreferences.getInstance();
+    String raw = sp.getString(_keysubmitSessionForDate) ?? "";
+    if (raw.isEmpty) {
+      submittedSessions = {};
+    } else {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(raw);
+        submittedSessions = decoded.map(
+          (key, value) => MapEntry(
+            key,
+            value is List
+                ? Set<String>.from(value.map((e) => e.toString()))
+                : <String>{},
+          ),
+        );
+      } catch (e) {
+        debugPrint("Failed to load submitted sessions: $e");
+        submittedSessions = {};
+      }
+    }
   }
 
   static Future<void> loadSubmittedLogs() async {
@@ -972,6 +999,7 @@ class AppData {
       submittedSessions[date] = {};
     }
     submittedSessions[date]!.addAll(sessionNames);
+    _saveToPrefs(_keysubmitSessionForDate, submittedSessions);
   }
 
   static bool isSessionSubmitted(String date, String sessionName) {
@@ -1122,6 +1150,7 @@ class AppData {
       examResultsByExamId[examId] = {};
     }
     examResultsByExamId[examId]![studentId] = resultData;
+    _saveToPrefs(_keyExamResults, examResultsByExamId);
   }
 
   /// Save multiple student results at once (e.g. Publish All button)
@@ -1162,7 +1191,9 @@ class AppData {
     return history;
   }
 
-  // ---------- import exrot functions ----------------//
+  // ---------- import export functions ----------------//
+
+  /// Safely encodes objects into JSON string, handling TimeOfDay & DateTime
   static Future<String> exportDataToJson() async {
     final sp = await SharedPreferences.getInstance();
 
@@ -1184,7 +1215,7 @@ class AppData {
         "examResultsByExamId": AppData.examResultsByExamId,
         "attendanceLogs": sp.getString(AppData._keyAttendanceLogs) != null
             ? jsonDecode(sp.getString(AppData._keyAttendanceLogs)!)
-            : {},
+            : AppData._attendanceLogs,
         "submittedSessions": AppData.submittedSessions.map(
           (key, value) => MapEntry(key, value.toList()),
         ),
@@ -1194,10 +1225,41 @@ class AppData {
       },
     };
 
-    return const JsonEncoder.withIndent('  ').convert(backupPayload);
+    final encoder = JsonEncoder.withIndent('  ', (nonEncodable) {
+      if (nonEncodable is TimeOfDay) {
+        final hour = nonEncodable.hour.toString().padLeft(2, '0');
+        final minute = nonEncodable.minute.toString().padLeft(2, '0');
+        return '$hour:$minute';
+      }
+      if (nonEncodable is DateTime) {
+        return nonEncodable.toIso8601String();
+      }
+      return nonEncodable.toString();
+    });
+
+    return encoder.convert(backupPayload);
   }
 
-  // 2. Import structured JSON string back into memory & SharedPreferences
+  /// Helper to parse "HH:mm" strings back to TimeOfDay
+  static TimeOfDay _parseTimeOfDay(dynamic input) {
+    if (input is TimeOfDay) return input;
+    if (input is String && input.contains(':')) {
+      final parts = input.split(':');
+      return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    }
+    return const TimeOfDay(hour: 0, minute: 0);
+  }
+
+  /// Helper to parse ISO strings back to DateTime
+  static DateTime _parseDateTime(dynamic input) {
+    if (input is DateTime) return input;
+    if (input is String) {
+      return DateTime.tryParse(input) ?? DateTime.now();
+    }
+    return DateTime.now();
+  }
+
+  /// Imports JSON string back into memory structures and SharedPreferences
   static Future<bool> importDataFromJson(String jsonStr) async {
     try {
       final Map<String, dynamic> decoded = jsonDecode(jsonStr);
@@ -1205,7 +1267,7 @@ class AppData {
 
       final sp = await SharedPreferences.getInstance();
 
-      // Clear existing memory lists
+      // Clear existing memory structures
       AppData.students.clear();
       AppData.users.clear();
       AppData.availableSessions.clear();
@@ -1215,35 +1277,67 @@ class AppData {
       AppData.submittedSessions.clear();
       AppData.submittedProgressLogs.clear();
 
-      // Populate Students
+      // 1. Populate Students
       if (data['students'] is List) {
         AppData.students.addAll(
-          List<Map<String, dynamic>>.from(data['students']),
+          (data['students'] as List)
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList(),
         );
         await sp.setString(AppData._keyStudents, jsonEncode(AppData.students));
       }
 
-      // Populate Users
+      // 2. Populate Users
       if (data['users'] is List) {
-        AppData.users.addAll(List<Map<String, dynamic>>.from(data['users']));
+        AppData.users.addAll(
+          (data['users'] as List)
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList(),
+        );
         await sp.setString(AppData._keyUsers, jsonEncode(AppData.users));
       }
 
-      // Populate Sessions
+      // 3. Populate Sessions
       if (data['sessions'] is List) {
-        AppData.availableSessions.addAll(
-          List<Map<String, dynamic>>.from(data['sessions']),
-        );
+        for (var item in data['sessions']) {
+          final session = Map<String, dynamic>.from(item);
+          if (session.containsKey('startTime')) {
+            session['startTime'] = _parseTimeOfDay(session['startTime']);
+          }
+          if (session.containsKey('endTime')) {
+            session['endTime'] = _parseTimeOfDay(session['endTime']);
+          }
+          AppData.availableSessions.add(session);
+        }
+
+        // Convert TimeOfDay back to String when persisting to SharedPreferences
+        final serializableSessions = AppData.availableSessions.map((s) {
+          final copy = Map<String, dynamic>.from(s);
+          if (copy['startTime'] is TimeOfDay) {
+            final tod = copy['startTime'] as TimeOfDay;
+            copy['startTime'] =
+                '${tod.hour.toString().padLeft(2, '0')}:${tod.minute.toString().padLeft(2, '0')}';
+          }
+          if (copy['endTime'] is TimeOfDay) {
+            final tod = copy['endTime'] as TimeOfDay;
+            copy['endTime'] =
+                '${tod.hour.toString().padLeft(2, '0')}:${tod.minute.toString().padLeft(2, '0')}';
+          }
+          return copy;
+        }).toList();
+
         await sp.setString(
           AppData._keySessions,
-          jsonEncode(AppData.availableSessions),
+          jsonEncode(serializableSessions),
         );
       }
 
-      // Populate Progress Logs
+      // 4. Populate Progress Logs
       if (data['progressLogs'] is List) {
         AppData.ProgressLogs.addAll(
-          List<Map<String, dynamic>>.from(data['progressLogs']),
+          (data['progressLogs'] as List)
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList(),
         );
         await sp.setString(
           AppData._keyProgressLogs,
@@ -1251,19 +1345,28 @@ class AppData {
         );
       }
 
-      // Populate Exams
+      // 5. Populate Exams
       if (data['exams'] is List) {
         for (var e in data['exams']) {
-          final map = Map<String, dynamic>.from(e);
-          if (map['date'] is String) {
-            map['date'] = DateTime.tryParse(map['date']) ?? DateTime.now();
+          final examMap = Map<String, dynamic>.from(e);
+          if (examMap.containsKey('date')) {
+            examMap['date'] = _parseDateTime(examMap['date']);
           }
-          AppData.exams.add(map);
+          AppData.exams.add(examMap);
         }
-        await sp.setString(AppData._keyExams, jsonEncode(data['exams']));
+
+        final serializableExams = AppData.exams.map((e) {
+          final copy = Map<String, dynamic>.from(e);
+          if (copy['date'] is DateTime) {
+            copy['date'] = (copy['date'] as DateTime).toIso8601String();
+          }
+          return copy;
+        }).toList();
+
+        await sp.setString(AppData._keyExams, jsonEncode(serializableExams));
       }
 
-      // Populate Exam Results
+      // 6. Populate Exam Results
       if (data['examResultsByExamId'] is Map) {
         final rawResults = data['examResultsByExamId'] as Map<String, dynamic>;
         rawResults.forEach((examId, studentMap) {
@@ -1277,10 +1380,29 @@ class AppData {
             });
           }
         });
+        await sp.setString(
+          AppData._keyExamResults,
+          jsonEncode(data['examResultsByExamId']),
+        );
       }
 
-      // Populate Attendance Logs
+      // 7. Populate Attendance Logs
       if (data['attendanceLogs'] is Map) {
+        final rawAttendance = data['attendanceLogs'] as Map<String, dynamic>;
+        AppData._attendanceLogs.clear();
+
+        rawAttendance.forEach((dateKey, sessionMap) {
+          if (sessionMap is Map) {
+            AppData._attendanceLogs[dateKey] = {};
+            sessionMap.forEach((sessionKey, studentMap) {
+              if (studentMap is Map) {
+                AppData._attendanceLogs[dateKey]![sessionKey] =
+                    Map<String, String>.from(studentMap);
+              }
+            });
+          }
+        });
+
         await sp.setString(
           AppData._keyAttendanceLogs,
           jsonEncode(data['attendanceLogs']),
@@ -1288,7 +1410,7 @@ class AppData {
         await AppData.loadAttendanceLogs();
       }
 
-      // Populate Submitted Sessions
+      // 8. Populate Submitted Sessions
       if (data['submittedSessions'] is Map) {
         (data['submittedSessions'] as Map).forEach((key, val) {
           if (val is List) {
@@ -1299,7 +1421,7 @@ class AppData {
         });
       }
 
-      // Populate Submitted Progress Logs
+      // 9. Populate Submitted Progress Logs
       if (data['submittedProgressLogs'] is Map) {
         (data['submittedProgressLogs'] as Map).forEach((key, val) {
           if (val is List) {
@@ -1311,8 +1433,9 @@ class AppData {
       }
 
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print("Error restoring data: $e");
+      print("Stack trace: $stackTrace");
       return false;
     }
   }
