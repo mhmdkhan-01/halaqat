@@ -110,13 +110,22 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 children: [
-                  Text(
-                    DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  if (!isToday) ...[
+                    Text(
+                      DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
+                  ] else
+                    Text(
+                      DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   if (isToday) ...[
                     const SizedBox(width: 8),
                     Container(

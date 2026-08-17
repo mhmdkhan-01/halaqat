@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:halaqat/features/admin_portal/presentation/admin_attendance_screen.dart';
 import 'package:halaqat/features/admin_portal/presentation/backup_restore_screen.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
 import 'package:halaqat/features/progress_tracking/data/app_data.dart';
@@ -141,17 +142,33 @@ class AdminHomeTab extends StatelessWidget {
                   Colors.blue,
                   Icons.person_pin_rounded,
                 ),
-                _buildSummaryCard(
-                  "Total Presents",
-                  "${AppData.getTotalAttendanceCount(DateFormat('yyyy-MM-dd').format(DateTime.now()), 'present')}",
-                  Colors.orange,
-                  Icons.check_circle,
+                InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdminAttendanceScreen(),
+                    ),
+                  ),
+                  child: _buildSummaryCard(
+                    "Total Presents",
+                    "${AppData.getTotalAttendanceCount(DateFormat('yyyy-MM-dd').format(DateTime.now()), 'present')}",
+                    Colors.orange,
+                    Icons.check_circle,
+                  ),
                 ),
-                _buildSummaryCard(
-                  "Total Absents",
-                  "${AppData.getTotalAttendanceCount(DateFormat('yyyy-MM-dd').format(DateTime.now()), 'absent')}",
-                  Colors.red,
-                  Icons.cancel,
+                InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdminAttendanceScreen(),
+                    ),
+                  ),
+                  child: _buildSummaryCard(
+                    "Total Absents",
+                    "${AppData.getTotalAttendanceCount(DateFormat('yyyy-MM-dd').format(DateTime.now()), 'absent')}",
+                    Colors.red,
+                    Icons.cancel,
+                  ),
                 ),
               ]),
             ),
