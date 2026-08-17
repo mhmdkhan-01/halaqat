@@ -4,6 +4,7 @@ import 'package:halaqat/features/admin_portal/presentation/admin_dashboard_scree
 import 'package:halaqat/features/daily_logging/presentation/teacher_main_navigation.dart';
 import 'package:halaqat/features/parent_portal/presentation/parent_dashboard.dart';
 import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:halaqat/features/progress_tracking/presentation/exam_management_screen.dart';
 
 // ==================== 1. SPLASH SCREEN ====================
 class SplashScreen extends StatefulWidget {
@@ -144,6 +145,23 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  bool rememberMe = false;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _loadRememberedUser();
+  }
+
+  Future<void> _loadRememberedUser() async {
+    String savedUser = await AppData.getRememberedUsername();
+    if (savedUser.isNotEmpty) {
+      setState(() {
+        _emailController.text = savedUser;
+        rememberMe = true;
+      });
+    }
+  }
 
   void _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -186,6 +204,13 @@ class _LoginScreenState extends State<LoginScreen> {
           String uid = res['userId'];
           String role = res['role'];
           await AppData.SaveLoginInfo(uid, role, true);
+          if (rememberMe) {
+            // Pass the entered username or phone number controller text
+            await AppData.saveRememberedUsername(_emailController.text.trim());
+          } else {
+            // Clear any previously saved username if "Remember Me" is unchecked
+            await AppData.clearRememberedUsername();
+          }
           if (res['role'] == "teacher") {
             Navigator.pushReplacement(
               context,
@@ -218,13 +243,58 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 20),
+                // ------------------ LANGUAGE TOGGLE ------------------
+                Align(
+                  alignment: Alignment.topRight,
+                  child: InkWell(
+                    onTap: () {
+                      final isEnglish = context.locale.languageCode == 'en';
+                      context.setLocale(Locale(isEnglish ? 'ur' : 'en'));
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.language,
+                            color: Color(0xFF0A5C36),
+                            size: 18,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            context.locale.languageCode == 'en'
+                                ? "ENG"
+                                : "اردو",
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0A5C36),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // ------------------ WELCOME TEXT ------------------
                 Text(
                   "welcome_back".tr(),
                   style: const TextStyle(
@@ -257,9 +327,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    hintText: "admin, teacher, or parent",
+                    hintText: "phone_number_hint".tr(),
                     prefixIcon: const Icon(
-                      Icons.person_outline_rounded,
+                      Icons.phone_outlined,
                       color: Color(0xFF94A3B8),
                     ),
                     filled: true,
@@ -332,6 +402,23 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: rememberMe,
+                      onChanged: (value) {
+                        setState(() {
+                          rememberMe = value ?? false;
+                        });
+                      },
+                    ),
+                    Text(
+                      "remember_me".tr(),
+                      style: const TextStyle(color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 32),
 
                 // Login Button
@@ -368,18 +455,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 30),
 
-                // Quick Login Helper Cards (Great for testing roles)
-                // Center(
-                //   child: Text(
-                //     "testing_hint".tr(),
-                //     style: const TextStyle(
-                //       color: Color(0xFF94A3B8),
-                //       fontSize: 12,
-                //       fontWeight: FontWeight.bold,
-                //     ),
-                //   ),
-                // ),
-                // const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [

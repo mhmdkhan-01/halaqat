@@ -86,7 +86,7 @@
   "tagline": "سبق، سبقی اور منزل کی روزانہ رپورٹ",
   "welcome_back": "خوش آمدید!",
   "login_subtitle": "ریکارڈ اپ ڈیٹ کرنے یا طالب علم کی کارکردگی دیکھنے کے لیے لاگ ان کریں۔",
-  "email_or_username": "ای میل یا صارف کا نام",
+  "email_or_username": "فون نمبر",
   "password": "پاس ورڈ",
   "field_required": "یہ خانہ پُر کرنا لازمی ہے",
   "login": "سائن ان کریں",
@@ -114,5 +114,7 @@
   "excellent": "ممتاز",
   "good": "عمدہ",
   "needs_practice": "مشق کی ضرورت ہے",
-  "logging_for_session": "سبق کے لیے اندارج"
+  "logging_for_session": "سبق کے لیے اندارج",
+  "remember_me":"مجھے یاد رکھنا",
+  "phone_number_hint": "03xxxxxxxxx"
 }

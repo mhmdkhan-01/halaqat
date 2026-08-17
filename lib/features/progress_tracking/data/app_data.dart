@@ -20,6 +20,7 @@ class AppData {
   static const String _keysubmittedProgressLogs = "cached_submitted_logs";
   static const String _keysubmitSessionForDate = "cached_submitSessionForDate";
   static const String _keyExamResults = "cached_exam_results";
+  static const String _keyRememberedUsername = 'remembered_username';
   //for attendance tab to see if already submitted or not
   static Map<String, Set<String>> submittedSessions = {};
   //for daily entery screen to see if progress log is already submitted or not
@@ -322,10 +323,7 @@ class AppData {
         );
       } catch (e) {
         debugPrint("Failed to load submitted progress logs: $e");
-        submittedProgressLogs = {};
       }
-    } else {
-      submittedProgressLogs = {};
     }
   }
 
@@ -1022,12 +1020,13 @@ class AppData {
   static Future<void> loadSubmittedSessions() async {
     final sp = await SharedPreferences.getInstance();
     String raw = sp.getString(_keysubmitSessionForDate) ?? "";
-    if (raw.isEmpty) {
-      submittedSessions = {};
-    } else {
+
+    if (raw.isNotEmpty) {
       try {
         final Map<String, dynamic> decoded = jsonDecode(raw);
-        submittedSessions = decoded.map(
+
+        // Parse into a local map first
+        final Map<String, Set<String>> parsedSessions = decoded.map(
           (key, value) => MapEntry(
             key,
             value is List
@@ -1035,10 +1034,14 @@ class AppData {
                 : <String>{},
           ),
         );
+
+        // Assign to state only after successful parsing
+        submittedSessions = parsedSessions;
       } catch (e) {
         debugPrint("Failed to load submitted sessions: $e");
-        submittedSessions = {};
       }
+    } else {
+      submittedSessions = {};
     }
   }
 
@@ -1476,5 +1479,22 @@ class AppData {
       return _attendanceLogs[date] ?? {};
     }
     return {};
+  }
+
+  static Future<void> saveRememberedUsername(String username) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_keyRememberedUsername, username);
+  }
+
+  /// Retrieves the saved username (returns empty string if none saved)
+  static Future<String> getRememberedUsername() async {
+    final sp = await SharedPreferences.getInstance();
+    return sp.getString(_keyRememberedUsername) ?? "";
+  }
+
+  /// Clears the saved username
+  static Future<void> clearRememberedUsername() async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.remove(_keyRememberedUsername);
   }
 }

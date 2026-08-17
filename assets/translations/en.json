@@ -86,7 +86,7 @@
   "tagline": "Sabaq, Sabqi & Manzil Progress Log",
   "welcome_back": "Welcome Back!",
   "login_subtitle": "Please log in to update records or view student progress reports.",
-  "email_or_username": "EMAIL OR USERNAME",
+  "email_or_username": "PHONE",
   "password": "PASSWORD",
   "field_required": "This field is required",
   "login": "Sign In",
@@ -114,5 +114,7 @@
   "excellent": "Excellent",
   "good": "Good",
   "needs_practice": "Needs Practice",
-  "logging_for_session": "Logging for Session"
+  "logging_for_session": "Logging for Session",
+  "remember_me":"Remember Me",
+  "phone_number_hint": "03xxxxxxxxx"
 }
