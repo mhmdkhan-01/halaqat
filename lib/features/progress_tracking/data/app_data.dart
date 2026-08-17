@@ -288,15 +288,31 @@ class AppData {
     await loadSubmittedSessions();
   }
 
-  static Future<void> loadSubmittedSessions() async {
+  static Future<void> submitProgressLogForDate(
+    String date,
+    String studentId,
+  ) async {
+    if (!submittedProgressLogs.containsKey(date)) {
+      submittedProgressLogs[date] = {};
+    }
+    submittedProgressLogs[date]!.add(studentId);
+
+    // Convert Set<String> to List<String> before encoding
+    final encodableMap = submittedProgressLogs.map(
+      (key, value) => MapEntry(key, value.toList()),
+    );
+
     final sp = await SharedPreferences.getInstance();
-    String raw = sp.getString(_keysubmitSessionForDate) ?? "";
-    if (raw.isEmpty) {
-      submittedSessions = {};
-    } else {
+    await sp.setString(_keysubmittedProgressLogs, jsonEncode(encodableMap));
+  }
+
+  static Future<void> loadSubmittedLogs() async {
+    final sp = await SharedPreferences.getInstance();
+    String raw = sp.getString(_keysubmittedProgressLogs) ?? "";
+    if (raw.isNotEmpty) {
       try {
         final Map<String, dynamic> decoded = jsonDecode(raw);
-        submittedSessions = decoded.map(
+        submittedProgressLogs = decoded.map(
           (key, value) => MapEntry(
             key,
             value is List
@@ -305,17 +321,9 @@ class AppData {
           ),
         );
       } catch (e) {
-        debugPrint("Failed to load submitted sessions: $e");
-        submittedSessions = {};
+        debugPrint("Failed to load submitted progress logs: $e");
+        submittedProgressLogs = {};
       }
-    }
-  }
-
-  static Future<void> loadSubmittedLogs() async {
-    final sp = await SharedPreferences.getInstance();
-    String raw = sp.getString(_keysubmittedProgressLogs) ?? "";
-    if (raw.isNotEmpty) {
-      submittedProgressLogs = jsonDecode(raw) as Map<String, Set<String>>;
     } else {
       submittedProgressLogs = {};
     }
@@ -994,12 +1002,44 @@ class AppData {
     await sp.remove(_keyIsLoggedIn);
   }
 
-  static void submitSessionForDate(String date, List<String> sessionNames) {
+  static Future<void> submitSessionForDate(
+    String date,
+    List<String> sessionNames,
+  ) async {
     if (!submittedSessions.containsKey(date)) {
       submittedSessions[date] = {};
     }
     submittedSessions[date]!.addAll(sessionNames);
-    _saveToPrefs(_keysubmitSessionForDate, submittedSessions);
+
+    // Convert Set<String> to List<String> for jsonEncode
+    final encodableMap = submittedSessions.map(
+      (key, value) => MapEntry(key, value.toList()),
+    );
+
+    await _saveToPrefs(_keysubmitSessionForDate, encodableMap);
+  }
+
+  static Future<void> loadSubmittedSessions() async {
+    final sp = await SharedPreferences.getInstance();
+    String raw = sp.getString(_keysubmitSessionForDate) ?? "";
+    if (raw.isEmpty) {
+      submittedSessions = {};
+    } else {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(raw);
+        submittedSessions = decoded.map(
+          (key, value) => MapEntry(
+            key,
+            value is List
+                ? Set<String>.from(value.map((e) => e.toString()))
+                : <String>{},
+          ),
+        );
+      } catch (e) {
+        debugPrint("Failed to load submitted sessions: $e");
+        submittedSessions = {};
+      }
+    }
   }
 
   static bool isSessionSubmitted(String date, String sessionName) {
@@ -1008,18 +1048,6 @@ class AppData {
 
   static Set<String> getSubmittedSessionsForDate(String date) {
     return submittedSessions[date] ?? {};
-  }
-
-  static Future<void> submitProgressLogForDate(
-    String date,
-    String studentId,
-  ) async {
-    if (!submittedProgressLogs.containsKey(date)) {
-      submittedProgressLogs[date] = {};
-    }
-    submittedProgressLogs[date]!.add(studentId);
-    var sp = await SharedPreferences.getInstance();
-    sp.setString(_keysubmittedProgressLogs, jsonEncode(submittedProgressLogs));
   }
 
   static bool isProgressLogSubmitted(String date, String studentId) {
