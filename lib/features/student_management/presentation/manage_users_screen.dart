@@ -90,7 +90,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            onPressed: () => _showAddUserBottomSheet(),
+            onPressed: () => _showAddUserBottomSheet(_tabController.index),
             icon: const Icon(Icons.person_add_alt_1_rounded),
             label: Text(
               "add_new_user".tr(),
@@ -446,13 +446,13 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
   }
 
   // Sheet 2: Create a New User
-  void _showAddUserBottomSheet() {
+  void _showAddUserBottomSheet(int ind) {
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
     final passwordController = TextEditingController();
-    String selectedRole = "Student";
-
+    List<String> roles = ["Student", "Teacher", "Parent"];
+    String selectedRole = roles[ind];
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
