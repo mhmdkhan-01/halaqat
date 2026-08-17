@@ -4,7 +4,6 @@ import 'package:halaqat/features/admin_portal/presentation/admin_dashboard_scree
 import 'package:halaqat/features/daily_logging/presentation/teacher_main_navigation.dart';
 import 'package:halaqat/features/parent_portal/presentation/parent_dashboard.dart';
 import 'package:halaqat/features/progress_tracking/data/app_data.dart';
-import 'package:halaqat/features/progress_tracking/presentation/exam_management_screen.dart';
 
 // ==================== 1. SPLASH SCREEN ====================
 class SplashScreen extends StatefulWidget {
