@@ -184,7 +184,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             width: 1,
             style: BorderStyle.solid,
           ),
-          headingRowColor: MaterialStateProperty.all(
+          headingRowColor: WidgetStatePropertyAll(
             Theme.of(context).primaryColor.withOpacity(0.05),
           ),
           columns: [
