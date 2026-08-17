@@ -127,7 +127,7 @@ class AdminHomeTab extends StatelessWidget {
                 crossAxisCount: 2,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.4,
+                childAspectRatio: 1.3,
               ),
               delegate: SliverChildListDelegate([
                 _buildSummaryCard(
@@ -146,29 +146,49 @@ class AdminHomeTab extends StatelessWidget {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminAttendanceScreen(),
+                      builder: (context) => const AdminAttendanceScreen(),
                     ),
                   ),
                   child: _buildSummaryCard(
-                    "Total Presents",
-                    "${AppData.getTotalAttendanceCount(DateFormat('yyyy-MM-dd').format(DateTime.now()), 'present')}",
-                    Colors.orange,
-                    Icons.check_circle,
+                    "Full Day Present",
+                    "${AppData.getUniquePresentStudentsCount(DateFormat('yyyy-MM-dd').format(DateTime.now()))}",
+                    Colors.green,
+                    Icons.check_circle_rounded,
                   ),
                 ),
                 InkWell(
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminAttendanceScreen(),
+                      builder: (context) => const AdminAttendanceScreen(),
                     ),
                   ),
                   child: _buildSummaryCard(
-                    "Total Absents",
-                    "${AppData.getTotalAttendanceCount(DateFormat('yyyy-MM-dd').format(DateTime.now()), 'absent')}",
-                    Colors.red,
-                    Icons.cancel,
+                    "Partial Present",
+                    "${AppData.getPartialPresentStudentsCount(DateFormat('yyyy-MM-dd').format(DateTime.now()))}",
+                    Colors.orange,
+                    Icons.remove_circle_outline_rounded,
                   ),
+                ),
+                InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminAttendanceScreen(),
+                    ),
+                  ),
+                  child: _buildSummaryCard(
+                    "Full Day Absent",
+                    "${AppData.getUniqueAbsentStudentsCount(DateFormat('yyyy-MM-dd').format(DateTime.now()))}",
+                    Colors.red,
+                    Icons.cancel_rounded,
+                  ),
+                ),
+                _buildSummaryCard(
+                  "Total Sessions",
+                  "${AppData.getTotalSessionsCountForDate(DateFormat('yyyy-MM-dd').format(DateTime.now()))}",
+                  Colors.purple,
+                  Icons.class_outlined,
                 ),
               ]),
             ),

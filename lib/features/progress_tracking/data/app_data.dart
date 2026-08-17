@@ -1497,4 +1497,81 @@ class AppData {
     final sp = await SharedPreferences.getInstance();
     await sp.remove(_keyRememberedUsername);
   }
+
+  static int getUniquePresentStudentsCount(String date) {
+    final dateLogs = _attendanceLogs[date];
+    if (dateLogs == null || dateLogs.isEmpty) return 0;
+
+    final Map<String, List<String>> studentStatuses = _groupStudentStatuses(
+      dateLogs,
+    );
+
+    int count = 0;
+    studentStatuses.forEach((studentId, statuses) {
+      if (statuses.every((s) => s.toLowerCase() == 'present')) {
+        count++;
+      }
+    });
+    return count;
+  }
+
+  /// Returns unique students present in SOME sessions and absent/late in others on [date]
+  static int getPartialPresentStudentsCount(String date) {
+    final dateLogs = _attendanceLogs[date];
+    if (dateLogs == null || dateLogs.isEmpty) return 0;
+
+    final Map<String, List<String>> studentStatuses = _groupStudentStatuses(
+      dateLogs,
+    );
+
+    int count = 0;
+    studentStatuses.forEach((studentId, statuses) {
+      final hasPresent = statuses.any((s) => s.toLowerCase() == 'present');
+      final hasNonPresent = statuses.any((s) => s.toLowerCase() != 'present');
+      if (hasPresent && hasNonPresent) {
+        count++;
+      }
+    });
+    return count;
+  }
+
+  /// Returns unique students absent in ALL sessions conducted on [date]
+  static int getUniqueAbsentStudentsCount(String date) {
+    final dateLogs = _attendanceLogs[date];
+    if (dateLogs == null || dateLogs.isEmpty) return 0;
+
+    final Map<String, List<String>> studentStatuses = _groupStudentStatuses(
+      dateLogs,
+    );
+
+    int count = 0;
+    studentStatuses.forEach((studentId, statuses) {
+      if (statuses.every((s) => s.toLowerCase() == 'absent')) {
+        count++;
+      }
+    });
+    return count;
+  }
+
+  /// Returns total number of sessions recorded on [date]
+  static int getTotalSessionsCountForDate(String date) {
+    final dateLogs = _attendanceLogs[date];
+    if (dateLogs == null) return 0;
+    return dateLogs.keys.length;
+  }
+
+  /// Private helper to aggregate all statuses per student for a given date
+  static Map<String, List<String>> _groupStudentStatuses(
+    Map<String, Map<String, String>> dateLogs,
+  ) {
+    final Map<String, List<String>> studentStatuses = {};
+
+    for (var session in dateLogs.values) {
+      session.forEach((studentId, status) {
+        studentStatuses.putIfAbsent(studentId, () => []).add(status);
+      });
+    }
+
+    return studentStatuses;
+  }
 }
