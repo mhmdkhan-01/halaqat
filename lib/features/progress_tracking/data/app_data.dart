@@ -1467,4 +1467,14 @@ class AppData {
       return false;
     }
   }
+
+  /// Retrieves a map of sessions and student statuses for a specific date string (yyyy-MM-dd)
+  static Map<String, Map<String, String>> getAttendanceLogsForDate(
+    String date,
+  ) {
+    if (_attendanceLogs.containsKey(date)) {
+      return _attendanceLogs[date] ?? {};
+    }
+    return {};
+  }
 }
