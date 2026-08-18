@@ -147,7 +147,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool rememberMe = false;
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _loadRememberedUser();
   }
