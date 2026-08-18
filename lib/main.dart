@@ -2,20 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await EasyLocalization.ensureInitialized(); // 1. Initialize Localization
 
+  // 1. Initialize Localization
+  await EasyLocalization.ensureInitialized();
+
+  // 2. Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // 3. Enable Firestore Offline Persistence
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+
+  // 4. Run App with Provider + EasyLocalization
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale('en'), Locale('ur')],
-      path: 'assets/translations', // Path to your JSON files
+      path: 'assets/translations',
       fallbackLocale: const Locale('en'),
-      child: const MyApp(),
+      child: ChangeNotifierProvider(
+        create: (_) => AppDataProvider()..initializeDataListeners(),
+        child: const MyApp(),
+      ),
     ),
   );
 }
