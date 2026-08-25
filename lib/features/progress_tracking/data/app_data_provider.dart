@@ -5,7 +5,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:collection/collection.dart'; // Import for firstWhereOrNull
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppDataProvider extends ChangeNotifier {
@@ -33,7 +32,7 @@ class AppDataProvider extends ChangeNotifier {
   static const String _keyUid = "uid";
   static const String _keyRole = "cached_role";
   static const String _keyIsLoggedIn = "cached_IsLoggedIn";
-  static const String _keyRememberedUsername = 'remembered_username';
+  // static const String _keyRememberedUsername = 'remembered_username';
   static String currentUserId = "";
   // In-Memory Global State
   List<Map<String, dynamic>> users = [];
@@ -593,6 +592,11 @@ class AppDataProvider extends ChangeNotifier {
         }
       });
     }
+
+    final cachedExams = prefs.getString(_keyExams);
+    if (cachedExams != null) {
+      exams = List<Map<String, dynamic>>.from(jsonDecode(cachedExams));
+    }
   }
 
   /// Clears stored user session data upon logout
@@ -944,6 +948,7 @@ class AppDataProvider extends ChangeNotifier {
       "type": exam["type"] ?? "Oral",
       "createdAt": FieldValue.serverTimestamp(),
     });
+    _saveToPrefs(_keyExams, exams);
   }
 
   /// Updates an existing exam in Firestore by document ID
