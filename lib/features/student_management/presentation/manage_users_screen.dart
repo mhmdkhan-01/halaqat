@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
+import 'package:provider/provider.dart';
 
 class ManageUsersScreen extends StatefulWidget {
   final int index;
@@ -13,26 +14,6 @@ class ManageUsersScreen extends StatefulWidget {
 class _ManageUsersScreenState extends State<ManageUsersScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  // Mock Data
-  final List<Map<String, dynamic>> _students =
-      AppData.getStudentsLegacyFormat();
-
-  // Storing entire map structure to have access to IDs
-  final Map<String, dynamic> _teachersData = AppData.getUserNamesByRole(
-    'teacher',
-  );
-  final Map<String, dynamic> _parentsData = AppData.getUserNamesByRole(
-    'parent',
-  );
-
-  List<String> get _teachersList =>
-      List<String>.from(_teachersData['name'] ?? []);
-  List<String> get _teachersIds =>
-      List<String>.from(_teachersData['uid'] ?? []);
-
-  List<String> get _parentsList =>
-      List<String>.from(_parentsData['name'] ?? []);
-  List<String> get _parentsIds => List<String>.from(_parentsData['uid'] ?? []);
 
   @override
   void initState() {
@@ -49,66 +30,94 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text("manage_users".tr()),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1E293B),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: const Color(0xFF0A5C36),
-          unselectedLabelColor: const Color(0xFF64748B),
-          indicatorColor: const Color(0xFF0A5C36),
-          indicatorWeight: 3,
-          tabs: [
-            Tab(text: "students".tr()),
-            Tab(text: "teachers".tr()),
-            Tab(text: "parents".tr()),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildStudentsTab(),
-          _buildGenericUserTab(_teachersList, "teacher"),
-          _buildGenericUserTab(_parentsList, "parent"),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0A5C36),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 54),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            onPressed: () => _showAddUserBottomSheet(_tabController.index),
-            icon: const Icon(Icons.person_add_alt_1_rounded),
-            label: Text(
-              "add_new_user".tr(),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    return Consumer<AppDataProvider>(
+      builder: (context, provider, child) {
+        final students = provider.studentsLegacyFormat;
+        final teachersData = provider.teachersData;
+        final parentsData = provider.parentsData;
+
+        final teachersList = teachersData['name'] ?? [];
+        final teachersIds = teachersData['uid'] ?? [];
+        final parentsList = parentsData['name'] ?? [];
+        final parentsIds = parentsData['uid'] ?? [];
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          appBar: AppBar(
+            title: Text("manage_users".tr()),
+            centerTitle: true,
+            elevation: 0,
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF1E293B),
+            bottom: TabBar(
+              controller: _tabController,
+              labelColor: const Color(0xFF0A5C36),
+              unselectedLabelColor: const Color(0xFF64748B),
+              indicatorColor: const Color(0xFF0A5C36),
+              indicatorWeight: 3,
+              tabs: [
+                Tab(text: "students".tr()),
+                Tab(text: "teachers".tr()),
+                Tab(text: "parents".tr()),
+              ],
             ),
           ),
-        ),
-      ),
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildStudentsTab(
+                students,
+                teachersList,
+                teachersIds,
+                parentsList,
+                parentsIds,
+              ),
+              _buildGenericUserTab(teachersList, teachersIds, "teacher"),
+              _buildGenericUserTab(parentsList, parentsIds, "parent"),
+            ],
+          ),
+          bottomNavigationBar: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A5C36),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 54),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: () => _showAddUserBottomSheet(_tabController.index),
+                icon: const Icon(Icons.person_add_alt_1_rounded),
+                label: Text(
+                  "add_new_user".tr(),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
   // --- Students Management List ---
-  Widget _buildStudentsTab() {
-    return (_students.isEmpty)
-        ? Center(
+  Widget _buildStudentsTab(
+    List<Map<String, dynamic>> students,
+    List<String> teachersList,
+    List<String> teachersIds,
+    List<String> parentsList,
+    List<String> parentsIds,
+  ) {
+    return (students.isEmpty)
+        ? const Center(
             child: Text(
               'No Students Available',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Color(0xFF64748B),
                 fontSize: 13,
                 fontStyle: FontStyle.italic,
@@ -118,9 +127,9 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
         : ListView.builder(
             padding: const EdgeInsets.all(16.0),
             physics: const BouncingScrollPhysics(),
-            itemCount: _students.length,
+            itemCount: students.length,
             itemBuilder: (context, index) {
-              final student = _students[index];
+              final student = students[index];
               return Card(
                 elevation: 0,
                 margin: const EdgeInsets.only(bottom: 12),
@@ -149,8 +158,13 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                               Icons.swap_horizontal_circle_outlined,
                               color: Color(0xFF0A5C36),
                             ),
-                            onPressed: () =>
-                                _showAssignRelationsSheet(student, index),
+                            onPressed: () => _showAssignRelationsSheet(
+                              student,
+                              teachersList,
+                              teachersIds,
+                              parentsList,
+                              parentsIds,
+                            ),
                             tooltip: "Assign Relationships",
                           ),
                         ],
@@ -226,7 +240,12 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
   }
 
   // --- Teachers & Parents Simple Lists ---
-  Widget _buildGenericUserTab(List<String> userList, String role) {
+  Widget _buildGenericUserTab(
+    List<String> userList,
+    List<String> userIds,
+    String role,
+  ) {
+    final provider = context.read<AppDataProvider>();
     return (userList.isEmpty)
         ? Center(
             child: Text(
@@ -272,14 +291,9 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                       color: Colors.redAccent,
                     ),
                     onPressed: () {
-                      setState(() {
-                        userList.removeAt(index);
-                        if (role == "teacher") {
-                          _teachersIds.removeAt(index);
-                        } else {
-                          _parentsIds.removeAt(index);
-                        }
-                      });
+                      if (index < userIds.length) {
+                        provider.deleteManagedUser(userIds[index], role);
+                      }
                     },
                   ),
                 ),
@@ -288,16 +302,19 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
           );
   }
 
-  // --- Bottom Sheets ---
-
   // Sheet 1: Assign Student to Teacher/Parent
-  void _showAssignRelationsSheet(Map<String, dynamic> student, int index) {
-    // If list is empty, default safely to "Unassigned" instead of calling .first
+  void _showAssignRelationsSheet(
+    Map<String, dynamic> student,
+    List<String> teachersList,
+    List<String> teachersIds,
+    List<String> parentsList,
+    List<String> parentsIds,
+  ) {
     String? currentTeacher = student['teacher'] == "Unassigned"
-        ? (_teachersList.isEmpty ? "Unassigned" : _teachersList.first)
+        ? (teachersList.isEmpty ? "Unassigned" : teachersList.first)
         : student['teacher'];
     String? currentParent = student['parent'] == "Unassigned"
-        ? (_parentsList.isEmpty ? "Unassigned" : _parentsList.first)
+        ? (parentsList.isEmpty ? "Unassigned" : parentsList.first)
         : student['parent'];
 
     showModalBottomSheet(
@@ -337,7 +354,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   DropdownButtonFormField<String>(
                     initialValue:
                         currentTeacher == "Unassigned" &&
-                            _teachersList.isNotEmpty
+                            teachersList.isNotEmpty
                         ? null
                         : currentTeacher,
                     hint: const Text("No teachers available"),
@@ -346,10 +363,10 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    items: _teachersList
+                    items: teachersList
                         .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                         .toList(),
-                    onChanged: _teachersList.isEmpty
+                    onChanged: teachersList.isEmpty
                         ? null
                         : (val) => setSheetState(() => currentTeacher = val),
                   ),
@@ -366,7 +383,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue:
-                        currentParent == "Unassigned" && _parentsList.isNotEmpty
+                        currentParent == "Unassigned" && parentsList.isNotEmpty
                         ? null
                         : currentParent,
                     hint: const Text("No parents available"),
@@ -375,10 +392,10 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    items: _parentsList
+                    items: parentsList
                         .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                         .toList(),
-                    onChanged: _parentsList.isEmpty
+                    onChanged: parentsList.isEmpty
                         ? null
                         : (val) => setSheetState(() => currentParent = val),
                   ),
@@ -396,38 +413,30 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                         ),
                       ),
                       onPressed: () {
-                        // Extracting actual IDs matching selected user index name entries
-                        int teacherIndex = _teachersList.indexOf(
+                        int teacherIndex = teachersList.indexOf(
                           currentTeacher ?? '',
                         );
-                        int parentIndex = _parentsList.indexOf(
+                        int parentIndex = parentsList.indexOf(
                           currentParent ?? '',
                         );
 
                         String teacherId = teacherIndex != -1
-                            ? _teachersIds[teacherIndex]
+                            ? teachersIds[teacherIndex]
                             : "Unassigned";
                         String parentId = parentIndex != -1
-                            ? _parentsIds[parentIndex]
+                            ? parentsIds[parentIndex]
                             : "Unassigned";
-                        debugPrint(
-                          "Assigning Student: ${student['name']} to Teacher ID: $teacherId and Parent ID: $parentId",
-                        );
-                        setState(() {
-                          AppData.assignRelations(
-                            currentParent ?? "Unassigned",
-                            currentTeacher ?? "Unassigned",
-                            parentId,
-                            teacherId,
-                            index,
-                          );
-                          _students[index]['parent'] =
-                              currentParent ?? "Unassigned";
-                          _students[index]['teacher'] =
-                              currentTeacher ?? "Unassigned";
-                          _students[index]['teacherId'] = teacherId;
-                          _students[index]['parentId'] = parentId;
-                        });
+
+                        context
+                            .read<AppDataProvider>()
+                            .assignStudentRelationships(
+                              studentId: student['id'] ?? '',
+                              teacherName: currentTeacher ?? "Unassigned",
+                              parentName: currentParent ?? "Unassigned",
+                              teacherId: teacherId,
+                              parentId: parentId,
+                            );
+
                         Navigator.pop(context);
                       },
                       child: Text(
@@ -451,8 +460,10 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
     final passwordController = TextEditingController();
+    final emailController = TextEditingController();
     List<String> roles = ["Student", "Teacher", "Parent"];
     String selectedRole = roles[ind];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -524,7 +535,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                       ),
                       const SizedBox(height: 24),
 
-                      // --- Full Name Field (All Roles) ---
+                      // --- Full Name Field ---
                       Text(
                         "full_name".tr(),
                         style: const TextStyle(
@@ -551,7 +562,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                       ),
                       const SizedBox(height: 16),
 
-                      // --- Dynamic Form Fields for Logins (Teachers & Parents Only) ---
+                      // --- Logins for Teachers & Parents ---
                       if (selectedRole != 'Student') ...[
                         const Text(
                           "Phone Number",
@@ -579,7 +590,42 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                           },
                         ),
                         const SizedBox(height: 16),
+                        const Text(
+                          "Email",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            hintText: "e.g., abc@halaqat.com",
+                            prefixIcon: const Icon(Icons.email_outlined),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "field_required".tr();
+                            }
 
+                            // Regular expression for standard email validation
+                            final emailRegex = RegExp(
+                              r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+',
+                            );
+
+                            if (!emailRegex.hasMatch(value.trim())) {
+                              return "Enter a valid email address";
+                            }
+
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
                         const Text(
                           "Login Password",
                           style: TextStyle(
@@ -628,44 +674,14 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                           onPressed: () {
                             if (formKey.currentState!.validate()) {
                               final name = nameController.text.trim();
-                              final generatedId = DateTime.now()
-                                  .millisecondsSinceEpoch
-                                  .toString();
 
-                              setState(() {
-                                if (selectedRole == 'Student') {
-                                  AppData.addStudent(generatedId, name);
-                                  _students.add({
-                                    "id": generatedId,
-                                    "name": name,
-                                    "teacher": "Unassigned",
-                                    "parent": "Unassigned",
-                                    "teacherId": "Unassigned",
-                                    "parentId": "Unassigned",
-                                  });
-                                } else if (selectedRole == 'Teacher') {
-                                  _teachersData['name']?.add(name);
-                                  _teachersData['uid']?.add(generatedId);
-                                  AppData.addUser(
-                                    generatedId,
-                                    name,
-                                    'teacher',
-                                    phoneController.text.trim(),
-                                    passwordController.text.trim(),
-                                  );
-                                } else {
-                                  _parentsData['name']?.add(name);
-                                  _parentsData['uid']?.add(generatedId);
-                                  AppData.addUser(
-                                    generatedId,
-                                    name,
-                                    'parent',
-
-                                    phoneController.text.trim(),
-                                    passwordController.text.trim(),
-                                  );
-                                }
-                              });
+                              context.read<AppDataProvider>().createManagedUser(
+                                name: name,
+                                role: selectedRole,
+                                phone: phoneController.text.trim(),
+                                password: passwordController.text.trim(),
+                                email: emailController.text.trim(),
+                              );
 
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(

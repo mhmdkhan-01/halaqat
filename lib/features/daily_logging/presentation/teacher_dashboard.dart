@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:flutter/material.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'daily_entry_screen.dart';
 
 class TeacherDashboardTab extends StatefulWidget {
@@ -12,39 +14,25 @@ class TeacherDashboardTab extends StatefulWidget {
 }
 
 class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
-  // Combine all async initializations into a single Future holder
-  late Future<Map<String, dynamic>> _dashboardDataFuture;
-
   String? _selectedSession;
   String _searchQuery = "";
+  String? _teacherUid;
+  bool _isLoadingUid = true;
 
   @override
   void initState() {
     super.initState();
-    _dashboardDataFuture = _loadDashboardData();
+    _loadTeacherUid();
   }
 
-  // Fetch both sessions and students asynchronously
-  Future<Map<String, dynamic>> _loadDashboardData() async {
-    final sessions = await AppData.getAvailableSessions();
-
+  Future<void> _loadTeacherUid() async {
     final sp = await SharedPreferences.getInstance();
-    final String? uid = sp.getString('uid');
-
-    debugPrint("Teache r UID: $uid");
-    List<Map<String, dynamic>> students = [];
-    if (uid != null && uid.isNotEmpty) {
-      students = await AppData.getTeacherStudents(uid);
+    if (mounted) {
+      setState(() {
+        _teacherUid = sp.getString('uid');
+        _isLoadingUid = false;
+      });
     }
-    debugPrint("Loaded ${students.length} students for teacher $uid");
-    // Determine initial active session based on current time
-    final runningSession = _determineCurrentlyRunningSession(sessions);
-
-    return {
-      'sessions': sessions,
-      'students': students,
-      'runningSession': runningSession,
-    };
   }
 
   // Helper method to calculate currently active session from a loaded list
@@ -72,28 +60,20 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingUid) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SafeArea(
-      child: FutureBuilder<Map<String, dynamic>>(
-        future: _dashboardDataFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text("Error loading dashboard: ${snapshot.error}"),
-            );
-          }
-
-          final data = snapshot.data ?? {};
-          final List<Map<String, dynamic>> sessions = data['sessions'] ?? [];
-          final List<Map<String, dynamic>> students = data['students'] ?? [];
-          final String runningSession =
-              data['runningSession'] ?? "Session 1 (Sabaq)";
+      child: Consumer<AppDataProvider>(
+        builder: (context, dataProvider, child) {
+          final sessions = dataProvider.getAvailableSessions();
+          final runningSession = _determineCurrentlyRunningSession(sessions);
 
           // Default selected session to active running session on first load
           _selectedSession ??= runningSession;
+
+          final students = dataProvider.getTeacherStudents(_teacherUid ?? '');
 
           // Filter students based on search query
           final filteredStudents = students.where((student) {
@@ -101,20 +81,21 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
             return name.contains(_searchQuery.toLowerCase());
           }).toList();
 
-          // Calculate stats using loaded list
           final totalStudents = filteredStudents.length;
+          final todayDateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-          // Future-ready placeholder for attendance stats
-          final presentToday = AppData.getTotalAttendanceCountForSession(
-            DateFormat('yyyy-MM-dd').format(DateTime.now()),
+          final presentToday = dataProvider.getTotalAttendanceCountForSession(
+            todayDateStr,
             'present',
             _selectedSession!,
           );
-          final absentToday = AppData.getTotalAttendanceCountForSession(
-            DateFormat('yyyy-MM-dd').format(DateTime.now()),
+
+          final absentToday = dataProvider.getTotalAttendanceCountForSession(
+            todayDateStr,
             'absent',
             _selectedSession!,
           );
+
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -151,7 +132,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0A5C36).withOpacity(0.08),
+                            color: const Color(0xFF0A5C36).withAlpha(20),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -170,6 +151,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                   ),
                 ),
               ),
+
               // 2. Dynamic Session Selector
               SliverToBoxAdapter(
                 child: Padding(
@@ -178,7 +160,6 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                     height: 42,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
-
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: sessions.length,
@@ -261,7 +242,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
+                          color: Colors.black.withAlpha(8),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -339,7 +320,12 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate((context, index) {
                           final student = filteredStudents[index];
-                          return _buildStudentCard(student);
+                          return _buildStudentCard(
+                            context,
+                            student,
+                            dataProvider,
+                            todayDateStr,
+                          );
                         }, childCount: filteredStudents.length),
                       ),
                     ),
@@ -359,7 +345,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withAlpha(5),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -393,13 +379,18 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
     );
   }
 
-  Widget _buildStudentCard(Map<String, dynamic> student) {
-    final Map<String, dynamic> attendanceRecord =
-        AppData.getAttendanceStatusForSession(
-          _selectedSession ?? '',
-          student["studentId"] ?? '',
-          DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        );
+  Widget _buildStudentCard(
+    BuildContext context,
+    Map<String, dynamic> student,
+    AppDataProvider dataProvider,
+    String todayDateStr,
+  ) {
+    final attendanceRecord = dataProvider.getAttendanceStatusForSession(
+      _selectedSession ?? '',
+      student["studentId"] ?? '',
+      todayDateStr,
+    );
+
     final String currentSessionStatus =
         attendanceRecord["attendanceStatus"] ?? "Pending";
 
@@ -422,7 +413,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withAlpha(5),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -449,11 +440,13 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                     ),
                   ),
                   subtitle: Padding(
-                    padding: EdgeInsets.only(top: 4.0),
-                    //Fix here
+                    padding: const EdgeInsets.only(top: 4.0),
                     child: Text(
-                      "S/O ${student['assignedParentName'] ?? '-'}",
-                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                      "S/O ${student['parent'] ?? '-'}",
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                   trailing: Row(
@@ -465,7 +458,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
+                          color: statusColor.withAlpha(25),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -484,7 +477,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                   onTap: () async {
                     if (currentSessionStatus == "Pending") {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
+                        const SnackBar(
                           content: Text(
                             'Please mark attendance for the session first.',
                           ),
@@ -495,7 +488,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                     }
                     if (currentSessionStatus == "Absent") {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
+                        const SnackBar(
                           content: Text('Student is absent for this session.'),
                           backgroundColor: Colors.red,
                         ),
@@ -512,9 +505,6 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                         ),
                       ),
                     );
-                    if (mounted) {
-                      setState(() {});
-                    }
                   },
                 ),
               ),

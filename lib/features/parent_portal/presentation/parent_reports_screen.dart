@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
+import 'package:provider/provider.dart';
 
 class ParentReportsScreen extends StatefulWidget {
   final String childName;
   final String studentId;
+
   const ParentReportsScreen({
     super.key,
     required this.childName,
@@ -16,31 +18,11 @@ class ParentReportsScreen extends StatefulWidget {
 }
 
 class _ParentReportsScreenState extends State<ParentReportsScreen> {
-  // Central Data Holds
-  late List<Map<String, dynamic>> _historyLogs;
-  late Map<String, dynamic> _analytics;
-  late List<String> _calendarAttendance;
-  late List<Map<String, dynamic>> _examResults;
-
-  // Linked mapping key matching our collections
-
-  // --- 1. Updated initState logic ---
-  @override
-  void initState() {
-    super.initState();
-    // Synchronize dependencies from AppData repository hooks
-    _historyLogs = AppData.getHistoryLogsForStudent(widget.studentId);
-    _analytics = AppData.getStudentAnalytics(widget.studentId);
-    _calendarAttendance = AppData.getMonthlyCalendarAttendance(
-      widget.studentId,
-    );
-
-    // Fetch student-specific results across all published exams
-    _loadExamResultsForStudent();
-  }
-
-  void _loadExamResultsForStudent() {
-    final List<Map<String, dynamic>> allExams = AppData.getExams();
+  /// Extracts published exam results for this student from provider state
+  List<Map<String, dynamic>> _getExamResultsForStudent(
+    AppDataProvider provider,
+  ) {
+    final List<Map<String, dynamic>> allExams = provider.exams;
     final List<Map<String, dynamic>> studentExamResults = [];
 
     for (var exam in allExams) {
@@ -48,15 +30,12 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
       final String examTitle = exam['title'] ?? 'Exam';
       final String examDate = exam['date'].toString().split(' ')[0];
 
-      // Get all results published for this exam
-      final Map<String, Map<String, dynamic>> examData =
-          AppData.getResultsForExam(examId);
+      final Map<String, Map<String, dynamic>> examData = provider
+          .getResultsForExam(examId);
 
-      // Filter to check if a published result exists for this specific student
       if (examData.containsKey(widget.studentId)) {
         final studentResult = examData[widget.studentId]!;
 
-        // Include published grades only
         if (studentResult['isGraded'] == true ||
             studentResult['status'] == 'Published') {
           studentExamResults.add({
@@ -70,10 +49,7 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
         }
       }
     }
-
-    setState(() {
-      _examResults = studentExamResults;
-    });
+    return studentExamResults;
   }
 
   @override
@@ -89,111 +65,129 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1E293B),
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- 1. Monthly Performance Key Metrics ---
-            _buildSectionHeader("Monthly Analytics Overview"),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Consumer<AppDataProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final historyLogs = provider.getHistoryLogsForStudent(
+            widget.studentId,
+          );
+          final analytics = provider.getStudentAnalytics(widget.studentId);
+          final calendarAttendance = provider.getMonthlyCalendarAttendance(
+            widget.studentId,
+          );
+          final examResults = _getExamResultsForStudent(provider);
+
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildAnalyticsCard(
-                  "Pages Learnt",
-                  "${_analytics['totalNewPages']} Pages",
-                  Icons.menu_book_rounded,
-                  Colors.teal,
+                // --- 1. Monthly Performance Key Metrics ---
+                _buildSectionHeader("Monthly Analytics Overview"),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildAnalyticsCard(
+                      "Pages Learnt",
+                      "${analytics['totalNewPages'] ?? 0} Pages",
+                      Icons.menu_book_rounded,
+                      Colors.teal,
+                    ),
+                    _buildAnalyticsCard(
+                      "Total Progress",
+                      "${((analytics['hifzProgressPercent'] ?? 0.0) * 100).toStringAsFixed(0)}%",
+                      Icons.analytics_outlined,
+                      Colors.indigo,
+                    ),
+                  ],
                 ),
-                _buildAnalyticsCard(
-                  "Total Progress",
-                  "${(_analytics['hifzProgressPercent'] * 100).toStringAsFixed(0)}%",
-                  Icons.analytics_outlined,
-                  Colors.indigo,
-                ),
+
+                const SizedBox(height: 24),
+
+                // --- 2. Attendance Overview & Tabular Calendar View ---
+                _buildSectionHeader("Attendance Summary"),
+                const SizedBox(height: 12),
+                _buildAttendanceSummaryCard(analytics),
+                const SizedBox(height: 12),
+                _buildCalendarGridView(calendarAttendance),
+
+                const SizedBox(height: 24),
+
+                // --- 3. Complete Daily Progress Logs ---
+                _buildSectionHeader("Daily Progress Logs"),
+                const SizedBox(height: 12),
+                (historyLogs.isEmpty)
+                    ? const Center(
+                        child: Text(
+                          'No Data is logged yet.',
+                          style: TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: historyLogs.length,
+                        itemBuilder: (context, index) {
+                          final log = historyLogs[index];
+                          return _buildDailyHistoryCard(log);
+                        },
+                      ),
+
+                const SizedBox(height: 24),
+
+                // --- 4. Exam Reports Section ---
+                _buildSectionHeader("Exam Reports"),
+                const SizedBox(height: 12),
+                examResults.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24.0),
+                          child: Text(
+                            "no_exam_results_found".tr(),
+                            style: const TextStyle(color: Color(0xFF64748B)),
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: examResults.length,
+                        itemBuilder: (context, index) {
+                          final exam = examResults[index];
+                          final String score = exam['hifzScore'].toString();
+                          final String formattedScore = score.contains('/')
+                              ? score
+                              : "$score/100";
+
+                          return _buildExamCard(
+                            examName: exam['examName'] ?? "Hifz Assessment",
+                            date: exam['date'] ?? "N/A",
+                            grade: exam['tajweedGrade'].toString().isEmpty
+                                ? "N/A"
+                                : exam['tajweedGrade'],
+                            score: formattedScore,
+                            subjectDetails:
+                                exam['remarks'].toString().isNotEmpty
+                                ? "${'remarks'.tr()}: ${exam['remarks']}"
+                                : (exam['syllabus'].toString().isNotEmpty
+                                      ? "${'syllabus'.tr()}: ${exam['syllabus']}"
+                                      : "no_remarks".tr()),
+                          );
+                        },
+                      ),
               ],
             ),
-
-            const SizedBox(height: 24),
-
-            // --- 2. Attendance Overview & Tabular Calendar View ---
-            _buildSectionHeader("Attendance Summary"),
-            const SizedBox(height: 12),
-            _buildAttendanceSummaryCard(),
-            const SizedBox(height: 12),
-            _buildCalendarGridView(),
-
-            const SizedBox(height: 24),
-
-            // --- 3. Complete Daily Progress Logs ---
-            _buildSectionHeader("Daily Progress Logs"),
-            const SizedBox(height: 12),
-            (_historyLogs.isEmpty)
-                ? Center(
-                    child: Text(
-                      'No Data is logged yet.',
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _historyLogs.length,
-                    itemBuilder: (context, index) {
-                      final log = _historyLogs[index];
-                      return _buildDailyHistoryCard(log);
-                    },
-                  ),
-
-            const SizedBox(height: 24),
-
-            // --- 4. Exam Reports Section ---
-            _buildSectionHeader("Exam Reports"),
-            const SizedBox(height: 12),
-            _examResults.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24.0),
-                      child: Text(
-                        "no_exam_results_found".tr(),
-                        style: const TextStyle(color: Color(0xFF64748B)),
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _examResults.length,
-                    itemBuilder: (context, index) {
-                      final exam = _examResults[index];
-                      final String score = exam['hifzScore'].toString();
-                      final String formattedScore = score.contains('/')
-                          ? score
-                          : "$score/100";
-
-                      return _buildExamCard(
-                        examName: exam['examName'] ?? "Hifz Assessment",
-                        date: exam['date'] ?? "N/A",
-                        grade: exam['tajweedGrade'].toString().isEmpty
-                            ? "N/A"
-                            : exam['tajweedGrade'],
-                        score: formattedScore,
-                        subjectDetails: exam['remarks'].toString().isNotEmpty
-                            ? "${'remarks'.tr()}: ${exam['remarks']}"
-                            : (exam['syllabus'].toString().isNotEmpty
-                                  ? "${'syllabus'.tr()}: ${exam['syllabus']}"
-                                  : "no_remarks".tr()),
-                      );
-                    },
-                  ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -261,9 +255,9 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
     );
   }
 
-  Widget _buildAttendanceSummaryCard() {
-    double rate = _analytics['attendanceRate'] as double;
-    debugPrint("Rate $rate");
+  Widget _buildAttendanceSummaryCard(Map<String, dynamic> analytics) {
+    final double rate =
+        (analytics['attendanceRate'] as num?)?.toDouble() ?? 0.0;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -313,19 +307,19 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
               children: [
                 _buildAttendanceMetricRow(
                   "Total Classes",
-                  "${_analytics['totalClasses']}",
+                  "${analytics['totalClasses'] ?? 0}",
                   const Color(0xFF1E293B),
                 ),
                 const Divider(height: 10),
                 _buildAttendanceMetricRow(
                   "Presents",
-                  "${_analytics['totalPresents']}",
+                  "${analytics['totalPresents'] ?? 0}",
                   const Color(0xFF10B981),
                 ),
                 const Divider(height: 10),
                 _buildAttendanceMetricRow(
                   "Absents",
-                  "${_analytics['totalAbsents']}",
+                  "${analytics['totalAbsents'] ?? 0}",
                   const Color(0xFFEF4444),
                 ),
               ],
@@ -336,7 +330,7 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
     );
   }
 
-  Widget _buildCalendarGridView() {
+  Widget _buildCalendarGridView(List<String> calendarAttendance) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -359,14 +353,14 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _calendarAttendance.length,
+            itemCount: calendarAttendance.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
             ),
             itemBuilder: (context, index) {
-              final status = _calendarAttendance[index];
+              final status = calendarAttendance[index];
 
               Color dayColor = const Color(0xFF10B981); // present
               if (status == "absent") dayColor = const Color(0xFFEF4444);
@@ -419,7 +413,7 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  log['date'],
+                  log['date'] ?? '',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF475569),
@@ -468,22 +462,22 @@ class _ParentReportsScreenState extends State<ParentReportsScreen> {
                 children: [
                   _buildProgressComponentRow(
                     "Sabaq (New)",
-                    "${log['sabaq']['surah']} - Lines: ${log['sabaq']['lines']}",
-                    "${log['grade'][0]}",
+                    "${log['sabaq']?['surah'] ?? 'N/A'} - Lines: ${log['sabaq']?['lines'] ?? '0'}",
+                    "${log['grade'] != null && (log['grade'] as List).isNotEmpty ? log['grade'][0] : 'N/A'}",
                     Colors.teal,
                   ),
                   const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Sabqi (Recent)",
-                    "${log['sabqi']}",
-                    "${log['grade'][1]}",
+                    "${log['sabqi'] ?? 'N/A'}",
+                    "${log['grade'] != null && (log['grade'] as List).length > 1 ? log['grade'][1] : 'N/A'}",
                     Colors.indigo,
                   ),
                   const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Manzil (Revision)",
-                    "${log['manzil']}",
-                    "${log['grade'][2]}",
+                    "${log['manzil'] ?? 'N/A'}",
+                    "${log['grade'] != null && (log['grade'] as List).length > 2 ? log['grade'][2] : 'N/A'}",
                     Colors.amber[800]!,
                   ),
                 ],

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
 import 'package:halaqat/features/daily_logging/presentation/attendance_tab.dart';
 import 'package:halaqat/features/daily_logging/presentation/student_history_screen.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'teacher_dashboard.dart'; // Imports Tab 1
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
+import 'teacher_dashboard.dart';
 
 class TeacherMainNavigation extends StatefulWidget {
   const TeacherMainNavigation({super.key});
@@ -22,11 +23,11 @@ class _TeacherMainNavigationState extends State<TeacherMainNavigation> {
   @override
   void initState() {
     super.initState();
-    _tabs = [
-      const TeacherDashboardTab(), // Tab 1
-      const StudentDirectoryTab(), // Tab 2
-      const AttendanceTab(), // Tab 3
-      const TeacherSettingsTab(), // Tab 4
+    _tabs = const [
+      TeacherDashboardTab(),
+      StudentDirectoryTab(),
+      AttendanceTab(),
+      TeacherSettingsTab(),
     ];
   }
 
@@ -144,62 +145,21 @@ class StudentDirectoryTab extends StatefulWidget {
 
 class _StudentDirectoryTabState extends State<StudentDirectoryTab> {
   final TextEditingController _searchController = TextEditingController();
-  List<Map<String, dynamic>> _allStudents = [];
-  List<Map<String, dynamic>> _filteredStudents = [];
-  bool _isLoading = true;
-  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _fetchStudents();
-    _searchController.addListener(_onSearchChanged);
+    // Refresh Provider state on init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppDataProvider>().fetchDirectoryStudents();
+    });
+    _searchController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _fetchStudents() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final data = await AppData.getDirectoryStudents();
-      setState(() {
-        _allStudents = data;
-        _filteredStudents = data;
-        _isLoading = false;
-      });
-      // Re-apply search filter if user pulled-to-refresh while searching
-      if (_searchController.text.isNotEmpty) {
-        _onSearchChanged();
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _onSearchChanged() {
-    final query = _searchController.text.trim().toLowerCase();
-    setState(() {
-      if (query.isEmpty) {
-        _filteredStudents = List.from(_allStudents);
-      } else {
-        _filteredStudents = _allStudents.where((student) {
-          final name = (student['name'] ?? '').toString().toLowerCase();
-          final para = (student['para'] ?? '').toString().toLowerCase();
-          return name.contains(query) || para.contains(query);
-        }).toList();
-      }
-    });
   }
 
   @override
@@ -212,61 +172,76 @@ class _StudentDirectoryTabState extends State<StudentDirectoryTab> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1E293B),
       ),
-      body: RefreshIndicator(
-        onRefresh: _fetchStudents,
-        color: const Color(0xFF0A5C36),
-        child: Column(
-          children: [
-            // Search Input Field
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: "Search student or para...",
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: Color(0xFF94A3B8),
+      body: Consumer<AppDataProvider>(
+        builder: (context, provider, child) {
+          final query = _searchController.text.trim().toLowerCase();
+          final filteredStudents = provider.directoryStudents.where((student) {
+            final name = (student['name'] ?? '').toString().toLowerCase();
+            final para = (student['para'] ?? '').toString().toLowerCase();
+            return name.contains(query) || para.contains(query);
+          }).toList();
+
+          return RefreshIndicator(
+            onRefresh: () => provider.fetchDirectoryStudents(),
+            color: const Color(0xFF0A5C36),
+            child: Column(
+              children: [
+                // Search Input Field
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
                   ),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(
-                            Icons.clear,
-                            color: Color(0xFF94A3B8),
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: const Color(0xFFF1F5F9),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: "Search student or para...",
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: Color(0xFF94A3B8),
+                      ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.clear,
+                                color: Color(0xFF94A3B8),
+                              ),
+                              onPressed: () => _searchController.clear(),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: const Color(0xFFF1F5F9),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
 
-            // Content Area
-            Expanded(child: _buildBodyContent()),
-          ],
-        ),
+                // Content Area
+                Expanded(child: _buildBodyContent(provider, filteredStudents)),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildBodyContent() {
-    if (_isLoading) {
+  Widget _buildBodyContent(
+    AppDataProvider provider,
+    List<Map<String, dynamic>> students,
+  ) {
+    if (provider.isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: Color(0xFF0A5C36)),
       );
     }
 
-    if (_errorMessage != null) {
+    if (provider.errorMessage != null) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
@@ -275,7 +250,7 @@ class _StudentDirectoryTabState extends State<StudentDirectoryTab> {
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Text(
-                "Error loading directory: $_errorMessage",
+                "Error loading directory: ${provider.errorMessage}",
                 style: const TextStyle(color: Colors.redAccent),
                 textAlign: TextAlign.center,
               ),
@@ -285,7 +260,7 @@ class _StudentDirectoryTabState extends State<StudentDirectoryTab> {
       );
     }
 
-    if (_filteredStudents.isEmpty) {
+    if (students.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
@@ -293,7 +268,7 @@ class _StudentDirectoryTabState extends State<StudentDirectoryTab> {
           Center(
             child: Text(
               _searchController.text.isEmpty
-                  ? "No students found in AppData."
+                  ? "No students found."
                   : "No matching students found.",
               style: const TextStyle(color: Color(0xFF94A3B8)),
             ),
@@ -307,9 +282,9 @@ class _StudentDirectoryTabState extends State<StudentDirectoryTab> {
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
-      itemCount: _filteredStudents.length,
+      itemCount: students.length,
       itemBuilder: (context, index) {
-        final student = _filteredStudents[index];
+        final student = students[index];
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -339,7 +314,7 @@ class _StudentDirectoryTabState extends State<StudentDirectoryTab> {
               ),
             ),
             subtitle: Text(
-              "Para ${student['para']}",
+              "Para ${student['para'] ?? ''}",
               style: const TextStyle(color: Color(0xFF64748B)),
             ),
             trailing: const Icon(
@@ -362,7 +337,7 @@ class _StudentDirectoryTabState extends State<StudentDirectoryTab> {
   }
 }
 
-// ================= Tab 3: Settings =================
+// ================= Tab 4: Settings =================
 class TeacherSettingsTab extends StatefulWidget {
   const TeacherSettingsTab({super.key});
 
@@ -372,30 +347,42 @@ class TeacherSettingsTab extends StatefulWidget {
 
 class _TeacherSettingsTabState extends State<TeacherSettingsTab> {
   bool isLoading = true;
-  late String tuid;
-  late String teacherName;
+  String teacherName = "";
+
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    getTeacherUid();
+    _loadTeacherData();
   }
 
-  Future<void> getTeacherUid() async {
-    var sp = await SharedPreferences.getInstance();
-    tuid = sp.getString("uid") ?? "N/A";
-    teacherName = await AppData.getUsersNameById(tuid);
-    isLoading = false;
-    setState(() {});
+  Future<void> _loadTeacherData() async {
+    final sp = await SharedPreferences.getInstance();
+    final tuid = sp.getString("uid") ?? "N/A";
+
+    // Fetch directly using provider
+    final provider = context.read<AppDataProvider>();
+    teacherName = await provider.getUsersNameById(tuid);
+
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final avatarChar = teacherName.isNotEmpty
+        ? teacherName[0].toUpperCase()
+        : '?';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8F6),
       appBar: AppBar(title: Text('settings'.tr())),
       body: (isLoading)
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF0A5C36)),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -419,8 +406,8 @@ class _TeacherSettingsTabState extends State<TeacherSettingsTab> {
                           radius: 30,
                           backgroundColor: const Color(0xFF0A5C36),
                           child: Text(
-                            teacherName[0].toUpperCase(),
-                            style: TextStyle(
+                            avatarChar,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -433,14 +420,14 @@ class _TeacherSettingsTabState extends State<TeacherSettingsTab> {
                           children: [
                             Text(
                               teacherName,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                                 color: Color(0xFF1E293B),
                               ),
                             ),
-                            SizedBox(height: 4),
-                            Text(
+                            const SizedBox(height: 4),
+                            const Text(
                               "Halaqa A",
                               style: TextStyle(
                                 color: Color(0xFF64748B),
@@ -517,8 +504,9 @@ class _TeacherSettingsTabState extends State<TeacherSettingsTab> {
                             color: Color(0xFF94A3B8),
                           ),
                           onTap: () async {
-                            // Handle log out
-                            await AppData.clearLoginInfo();
+                            final provider = context.read<AppDataProvider>();
+                            await provider.clearLoginInfo();
+                            if (!context.mounted) return;
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(

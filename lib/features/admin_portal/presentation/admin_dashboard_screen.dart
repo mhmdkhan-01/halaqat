@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:provider/provider.dart';
+
 import 'package:halaqat/features/admin_portal/presentation/admin_attendance_screen.dart';
 import 'package:halaqat/features/admin_portal/presentation/backup_restore_screen.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
 import 'package:halaqat/features/progress_tracking/presentation/publish_results_screen.dart';
-
-// Imports for your screens
 import 'package:halaqat/features/student_management/presentation/manage_users_screen.dart';
 import 'package:halaqat/features/progress_tracking/presentation/manage_sessions_screen.dart';
 import 'package:halaqat/features/progress_tracking/presentation/exam_management_screen.dart';
@@ -20,12 +20,12 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _currentTab = 0;
-  // The main sub-screens the Admin can switch between via Bottom Navigation
-  final List<Widget> _screens = [
-    const AdminHomeTab(),
-    const ManageUsersTab(),
-    const ManageAcademicTab(),
-    const AdminSettingsTab(), // Added Logout Screen
+
+  final List<Widget> _screens = const [
+    AdminHomeTab(),
+    ManageUsersTab(),
+    ManageAcademicTab(),
+    AdminSettingsTab(),
   ];
 
   @override
@@ -72,11 +72,14 @@ class AdminHomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<AppDataProvider>();
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
     return SafeArea(
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // Sleek Header
+          // Header
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20.0),
@@ -105,7 +108,6 @@ class AdminHomeTab extends StatelessWidget {
                       ),
                     ],
                   ),
-                  //replacing CircleAvatar with language switcher
                   const CircleAvatar(
                     backgroundColor: Color(0xFF0A5C36),
                     radius: 22,
@@ -122,76 +124,86 @@ class AdminHomeTab extends StatelessWidget {
           // Overview Stats Grid
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.3,
-              ),
-              delegate: SliverChildListDelegate([
-                _buildSummaryCard(
-                  "Total Students",
-                  "${AppData.getTotalStudentsCount()}",
-                  const Color(0xFF0A5C36),
-                  Icons.school,
-                ),
-                _buildSummaryCard(
-                  "Total Teachers",
-                  "${AppData.getTotalTeachersCount()}",
-                  Colors.blue,
-                  Icons.person_pin_rounded,
-                ),
-                InkWell(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AdminAttendanceScreen(),
+            sliver: provider.isLoading
+                ? const SliverToBoxAdapter(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: CircularProgressIndicator(),
+                      ),
                     ),
+                  )
+                : SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 1.3,
+                        ),
+                    delegate: SliverChildListDelegate([
+                      _buildSummaryCard(
+                        "Total Students",
+                        "${provider.getTotalStudentsCount()}",
+                        const Color(0xFF0A5C36),
+                        Icons.school,
+                      ),
+                      _buildSummaryCard(
+                        "Total Teachers",
+                        "${provider.getTotalTeachersCount()}",
+                        Colors.blue,
+                        Icons.person_pin_rounded,
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminAttendanceScreen(),
+                          ),
+                        ),
+                        child: _buildSummaryCard(
+                          "Full Day Present",
+                          "${provider.getUniquePresentStudentsCount(todayStr)}",
+                          Colors.green,
+                          Icons.check_circle_rounded,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminAttendanceScreen(),
+                          ),
+                        ),
+                        child: _buildSummaryCard(
+                          "Partial Present",
+                          "${provider.getPartialPresentStudentsCount(todayStr)}",
+                          Colors.orange,
+                          Icons.remove_circle_outline_rounded,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminAttendanceScreen(),
+                          ),
+                        ),
+                        child: _buildSummaryCard(
+                          "Full Day Absent",
+                          "${provider.getUniqueAbsentStudentsCount(todayStr)}",
+                          Colors.red,
+                          Icons.cancel_rounded,
+                        ),
+                      ),
+                      _buildSummaryCard(
+                        "Total Sessions",
+                        "${provider.getTotalSessionsCount()}",
+                        Colors.purple,
+                        Icons.class_outlined,
+                      ),
+                    ]),
                   ),
-                  child: _buildSummaryCard(
-                    "Full Day Present",
-                    "${AppData.getUniquePresentStudentsCount(DateFormat('yyyy-MM-dd').format(DateTime.now()))}",
-                    Colors.green,
-                    Icons.check_circle_rounded,
-                  ),
-                ),
-                InkWell(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AdminAttendanceScreen(),
-                    ),
-                  ),
-                  child: _buildSummaryCard(
-                    "Partial Present",
-                    "${AppData.getPartialPresentStudentsCount(DateFormat('yyyy-MM-dd').format(DateTime.now()))}",
-                    Colors.orange,
-                    Icons.remove_circle_outline_rounded,
-                  ),
-                ),
-                InkWell(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AdminAttendanceScreen(),
-                    ),
-                  ),
-                  child: _buildSummaryCard(
-                    "Full Day Absent",
-                    "${AppData.getUniqueAbsentStudentsCount(DateFormat('yyyy-MM-dd').format(DateTime.now()))}",
-                    Colors.red,
-                    Icons.cancel_rounded,
-                  ),
-                ),
-                _buildSummaryCard(
-                  "Total Sessions",
-                  "${AppData.getTotalSessionsCountForDate(DateFormat('yyyy-MM-dd').format(DateTime.now()))}",
-                  Colors.purple,
-                  Icons.class_outlined,
-                ),
-              ]),
-            ),
           ),
 
           // Quick Shortcuts Title
@@ -224,7 +236,7 @@ class AdminHomeTab extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withAlpha(5), // Replaced withOpacity
+                      color: Colors.black.withAlpha(5),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -317,7 +329,7 @@ class AdminHomeTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(4), // Replaced withOpacity
+            color: Colors.black.withAlpha(4),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -370,7 +382,7 @@ class AdminHomeTab extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withAlpha(30), // Replaced withOpacity
+              color: color.withAlpha(30),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 22),
@@ -468,16 +480,14 @@ class ManageUsersTab extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: Colors.grey.withAlpha(38),
-        ), // Replaced withOpacity
+        side: BorderSide(color: Colors.grey.withAlpha(38)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withAlpha(30), // Replaced withOpacity
+            color: color.withAlpha(30),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 28),
@@ -577,16 +587,14 @@ class ManageAcademicTab extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: Colors.grey.withAlpha(38),
-        ), // Replaced withOpacity
+        side: BorderSide(color: Colors.grey.withAlpha(38)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withAlpha(30), // Replaced withOpacity
+            color: color.withAlpha(30),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 28),
@@ -610,11 +618,7 @@ class ManageAcademicTab extends StatelessWidget {
   }
 }
 
-// Ensure your project model paths match these imports
-// import 'path/to/app_data.dart';
-// import 'path/to/login_screen.dart';
-
-// ================= Tab 3: Settings =================
+// ================= Tab 4: Settings =================
 class AdminSettingsTab extends StatefulWidget {
   const AdminSettingsTab({super.key});
 
@@ -623,11 +627,6 @@ class AdminSettingsTab extends StatefulWidget {
 }
 
 class _AdminSettingsTabState extends State<AdminSettingsTab> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -644,14 +643,14 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withAlpha(5),
                     blurRadius: 15,
                     offset: const Offset(0, 6),
                   ),
                 ],
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: Color(0xFF0A5C36),
@@ -683,7 +682,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.015),
+                    color: Colors.black.withAlpha(4),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -691,7 +690,6 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
               ),
               child: Column(
                 children: [
-                  // Language ListTile
                   ListTile(
                     leading: const Icon(
                       Icons.language,
@@ -720,10 +718,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                       }
                     },
                   ),
-
                   const Divider(height: 1, indent: 56),
-
-                  // Import Data ListTile (Automatically restores the latest backup file)
                   ListTile(
                     leading: const Icon(
                       Icons.cloud_sync,
@@ -746,14 +741,12 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => BackupRestoreScreen(),
+                          builder: (context) => const BackupRestoreScreen(),
                         ),
                       );
                     },
                   ),
                   const Divider(height: 1, indent: 56),
-
-                  // Log Out ListTile
                   ListTile(
                     leading: const Icon(Icons.logout, color: Color(0xFF0A5C36)),
                     title: const Text(
@@ -770,7 +763,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                       color: Color(0xFF94A3B8),
                     ),
                     onTap: () async {
-                      await AppData.clearLoginInfo();
+                      await context.read<AppDataProvider>().clearLoginInfo();
                       if (!context.mounted) return;
                       Navigator.pushReplacement(
                         context,

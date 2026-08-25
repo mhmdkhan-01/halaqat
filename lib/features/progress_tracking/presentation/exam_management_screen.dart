@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
+import 'package:provider/provider.dart';
 
 class ExamManagementScreen extends StatefulWidget {
   const ExamManagementScreen({super.key});
@@ -10,16 +11,11 @@ class ExamManagementScreen extends StatefulWidget {
 }
 
 class _ExamManagementScreenState extends State<ExamManagementScreen> {
-  // Mock Data for scheduled exams
-  List<Map<String, dynamic>> _exams = AppData.getExams();
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-  }
-
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<AppDataProvider>(context);
+    final exams = provider.exams;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -29,15 +25,15 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1E293B),
       ),
-      body: _exams.isEmpty
+      body: exams.isEmpty
           ? _buildEmptyState()
           : ListView.builder(
               padding: const EdgeInsets.all(16.0),
               physics: const BouncingScrollPhysics(),
-              itemCount: _exams.length,
+              itemCount: exams.length,
               itemBuilder: (context, index) {
-                final exam = _exams[index];
-                return _buildExamCard(exam, index);
+                final exam = exams[index];
+                return _buildExamCard(exam, index, provider);
               },
             ),
       bottomNavigationBar: SafeArea(
@@ -52,7 +48,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            onPressed: () => _showScheduleExamBottomSheet(),
+            onPressed: () => _showScheduleExamBottomSheet(provider),
             icon: const Icon(Icons.event_note_rounded),
             label: Text(
               "schedule_exam".tr(),
@@ -89,8 +85,15 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
     );
   }
 
-  Widget _buildExamCard(Map<String, dynamic> exam, int index) {
-    final formattedDate = DateFormat('yyyy-MM-dd').format(exam['date']);
+  Widget _buildExamCard(
+    Map<String, dynamic> exam,
+    int index,
+    AppDataProvider provider,
+  ) {
+    final DateTime examDate = exam['date'] is DateTime
+        ? exam['date']
+        : DateTime.tryParse(exam['date'].toString()) ?? DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd').format(examDate);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -99,7 +102,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(5), // Safe alternative to withOpacity
+            color: Colors.black.withAlpha(5),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -116,7 +119,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    exam['title'],
+                    exam['title'] ?? '',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -130,13 +133,11 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(
-                      0xFF0A5C36,
-                    ).withAlpha(30), // Safe alternative to withOpacity
+                    color: const Color(0xFF0A5C36).withAlpha(30),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    exam['type'],
+                    exam['type'] ?? 'Oral',
                     style: const TextStyle(
                       color: Color(0xFF0A5C36),
                       fontSize: 12,
@@ -165,35 +166,16 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                 ),
               ],
             ),
-            // const SizedBox(height: 8),
-            // Row(
-            //   crossAxisAlignment: CrossAxisAlignment.start,
-            //   children: [
-            //     const Icon(
-            //       Icons.book_rounded,
-            //       size: 16,
-            //       color: Color(0xFF64748B),
-            //     ),
-            //     const SizedBox(width: 6),
-            //     Expanded(
-            //       child: Text(
-            //         "${'syllabus'.tr()}: ${exam['syllabus']}",
-            //         style: const TextStyle(
-            //           color: Color(0xFF475569),
-            //           fontSize: 13,
-            //           fontWeight: FontWeight.w600,
-            //         ),
-            //       ),
-            //     ),
-            //   ],
-            // ),
             const Divider(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton.icon(
-                  onPressed: () =>
-                      _showScheduleExamBottomSheet(exam: exam, index: index),
+                  onPressed: () => _showScheduleExamBottomSheet(
+                    provider,
+                    exam: exam,
+                    index: index,
+                  ),
                   icon: const Icon(
                     Icons.edit_outlined,
                     size: 18,
@@ -206,7 +188,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                 ),
                 const SizedBox(width: 8),
                 TextButton.icon(
-                  onPressed: () => _confirmDelete(index),
+                  onPressed: () => _confirmDelete(exam['id'], provider),
                   icon: const Icon(
                     Icons.delete_outline_rounded,
                     size: 18,
@@ -225,17 +207,21 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
     );
   }
 
-  // --- Bottom Sheet & Interaction Panel ---
-
-  void _showScheduleExamBottomSheet({Map<String, dynamic>? exam, int? index}) {
+  void _showScheduleExamBottomSheet(
+    AppDataProvider provider, {
+    Map<String, dynamic>? exam,
+    int? index,
+  }) {
     final isEditing = exam != null;
     final titleController = TextEditingController(
       text: isEditing ? exam['title'] : "",
     );
     DateTime selectedDate = isEditing
-        ? exam['date']
+        ? (exam['date'] is DateTime
+              ? exam['date']
+              : DateTime.tryParse(exam['date'].toString()) ?? DateTime.now())
         : DateTime.now().add(const Duration(days: 7));
-    String selectedType = isEditing ? exam['type'] : "Oral";
+    String selectedType = isEditing ? exam['type'] ?? "Oral" : "Oral";
 
     showModalBottomSheet(
       context: context,
@@ -275,8 +261,6 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // Exam Title
                   Text(
                     "exam_title".tr(),
                     style: const TextStyle(
@@ -294,29 +278,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                       ),
                     ),
                   ),
-                  // const SizedBox(height: 20),
-
-                  // Syllabus Details
-                  // Text(
-                  //   "syllabus_details".tr(),
-                  //   style: const TextStyle(
-                  //     fontWeight: FontWeight.bold,
-                  //     color: Color(0xFF64748B),
-                  //   ),
-                  // ),
-                  // const SizedBox(height: 8),
-                  // TextField(
-                  //   controller: syllabusController,
-                  //   decoration: InputDecoration(
-                  //     hintText: "e.g., Surah Ya-Sin or Para 30",
-                  //     border: OutlineInputBorder(
-                  //       borderRadius: BorderRadius.circular(12),
-                  //     ),
-                  //   ),
-                  // ),
                   const SizedBox(height: 20),
-
-                  // Date Picker & Exam Type Row
                   Row(
                     children: [
                       Expanded(
@@ -390,7 +352,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                             ),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              initialValue: selectedType,
+                              value: selectedType,
                               decoration: InputDecoration(
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -420,7 +382,6 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                     ],
                   ),
                   const SizedBox(height: 32),
-
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -432,28 +393,27 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: () {
+                      onPressed: () async {
                         if (titleController.text.isNotEmpty) {
+                          Map<String, dynamic> ex = {
+                            "id": isEditing
+                                ? exam['id']
+                                : DateTime.now().millisecondsSinceEpoch
+                                      .toString(),
+                            "title": titleController.text,
+                            "date": selectedDate,
+                            "type": selectedType,
+                          };
+
                           if (isEditing) {
-                            Map<String, dynamic> ex = {
-                              "id": exam['id'],
-                              "title": titleController.text,
-                              "date": selectedDate,
-                              "type": selectedType,
-                            };
-                            AppData.updateExam(ex, index!);
+                            await provider.updateExamInFirestore(ex);
                           } else {
-                            Map<String, dynamic> ex = {
-                              "id": DateTime.now().millisecondsSinceEpoch
-                                  .toString(),
-                              "title": titleController.text,
-                              "date": selectedDate,
-                              "type": selectedType,
-                            };
-                            AppData.addExam(ex);
+                            await provider.addExamToFirestore(ex);
                           }
-                          setState(() {});
-                          Navigator.pop(context);
+
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                          }
                         }
                       },
                       child: Text(
@@ -474,7 +434,7 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
     );
   }
 
-  void _confirmDelete(int index) {
+  void _confirmDelete(String examId, AppDataProvider provider) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -489,10 +449,11 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              AppData.deleteExam(index);
-              setState(() {});
-              Navigator.pop(context);
+            onPressed: () async {
+              await provider.deleteExamFromFirestore(examId);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
             child: Text(
               "delete".tr(),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:provider/provider.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
 
 class PublishResultsScreen extends StatefulWidget {
   const PublishResultsScreen({super.key});
@@ -10,31 +11,38 @@ class PublishResultsScreen extends StatefulWidget {
 }
 
 class _PublishResultsScreenState extends State<PublishResultsScreen> {
-  late List<Map<String, dynamic>> _exams;
   String? _selectedExamId;
-  // ignore: unused_field
-  String? _selectedExamTitle;
   List<Map<String, dynamic>> _students = [];
 
   @override
   void initState() {
     super.initState();
-    _exams = AppData.getExams();
-    if (_exams.isNotEmpty) {
-      _selectedExamId = _exams[0]['id']?.toString();
-      _selectedExamTitle = _exams[0]['title']?.toString();
-      _loadStudentsForExam(_selectedExamId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initData();
+    });
+  }
+
+  void _initData() {
+    final provider = Provider.of<AppDataProvider>(context, listen: false);
+    final exams = provider.availableExams;
+
+    if (exams.isNotEmpty) {
+      final firstExamId = exams[0]['id']?.toString();
+      setState(() {
+        _selectedExamId = firstExamId;
+      });
+      _loadStudentsForExam(firstExamId);
     }
   }
 
   void _loadStudentsForExam(String? examId) {
     if (examId == null) return;
 
-    // Fetch existing results directly using AppData getter
-    final examData = AppData.getResultsForExam(examId);
+    final provider = Provider.of<AppDataProvider>(context, listen: false);
+    final examData = provider.getResultsForExam(examId);
 
     setState(() {
-      _students = AppData.students.map((student) {
+      _students = provider.allStudents.map((student) {
         final String sId = student['studentId']?.toString() ?? '';
         final Map<String, dynamic>? existingLog = examData[sId];
 
@@ -55,123 +63,144 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text("publish_results".tr()),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1E293B),
-      ),
-      body: Column(
-        children: [
-          // Exam Selector Header
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 12.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "select_exam".tr(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF64748B),
-                    fontSize: 13,
-                  ),
+    return Consumer<AppDataProvider>(
+      builder: (context, provider, child) {
+        final exams = provider.availableExams;
+
+        // Auto-select initial exam if not yet selected
+        if (_selectedExamId == null && exams.isNotEmpty) {
+          _selectedExamId = exams[0]['id']?.toString();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _loadStudentsForExam(_selectedExamId);
+          });
+        }
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          appBar: AppBar(
+            title: Text("publish_results".tr()),
+            centerTitle: true,
+            elevation: 0,
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF1E293B),
+          ),
+          body: Column(
+            children: [
+              // Exam Selector Header
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 12.0,
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedExamId,
-                      isExpanded: true,
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: Color(0xFF0A5C36),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "select_exam".tr(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF64748B),
+                        fontSize: 13,
                       ),
-                      items: _exams.map<DropdownMenuItem<String>>((exam) {
-                        final String id = exam['id']?.toString() ?? '';
-                        final String title = exam['title']?.toString() ?? '';
-
-                        return DropdownMenuItem<String>(
-                          value: id,
-                          child: Text(
-                            title,
-                            style: const TextStyle(
-                              color: Color(0xFF1E293B),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (String? val) {
-                        if (val == null) return;
-                        final selectedExam = _exams.firstWhere(
-                          (e) => e['id'].toString() == val,
-                          orElse: () => {},
-                        );
-                        setState(() {
-                          _selectedExamId = val;
-                          _selectedExamTitle = selectedExam['title']
-                              ?.toString();
-                        });
-                        _loadStudentsForExam(val);
-                      },
                     ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedExamId,
+                          isExpanded: true,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Color(0xFF0A5C36),
+                          ),
+                          items: exams.map<DropdownMenuItem<String>>((exam) {
+                            final String id = exam['id']?.toString() ?? '';
+                            final String title =
+                                exam['title']?.toString() ?? '';
+
+                            return DropdownMenuItem<String>(
+                              value: id,
+                              child: Text(
+                                title,
+                                style: const TextStyle(
+                                  color: Color(0xFF1E293B),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (String? val) {
+                            if (val == null) return;
+                            setState(() {
+                              _selectedExamId = val;
+                            });
+                            _loadStudentsForExam(val);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Student Grading List
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: _students.length,
+                  itemBuilder: (context, index) {
+                    final student = _students[index];
+                    return _buildStudentGradingCard(student, index);
+                  },
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A5C36),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 54),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: provider.isLoading ? null : _publishAllResults,
+                icon: provider.isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.cloud_upload_rounded),
+                label: Text(
+                  "publish_to_parents".tr(),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // Student Grading List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              physics: const BouncingScrollPhysics(),
-              itemCount: _students.length,
-              itemBuilder: (context, index) {
-                final student = _students[index];
-                return _buildStudentGradingCard(student, index);
-              },
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0A5C36),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 54),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
               ),
-              elevation: 0,
-            ),
-            onPressed: _publishAllResults,
-            icon: const Icon(Icons.cloud_upload_rounded),
-            label: Text(
-              "publish_to_parents".tr(),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -400,11 +429,10 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              onPressed: () {
+              onPressed: () async {
                 if (marksController.text.isNotEmpty) {
                   int marks = int.tryParse(marksController.text.trim()) ?? 0;
 
-                  // Determine grade based on marks range
                   String grade;
                   if (marks >= 85) {
                     grade = "ممتاز";
@@ -419,6 +447,7 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                   } else {
                     grade = "ضعيف جدًا";
                   }
+
                   final updatedStudent = {
                     ...student,
                     "hifzScore": marksController.text,
@@ -433,16 +462,21 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
                     _students[index] = updatedStudent;
                   });
 
-                  // Immediately persist single edit to AppData memory
                   if (_selectedExamId != null) {
-                    AppData.saveStudentResult(
+                    final provider = Provider.of<AppDataProvider>(
+                      context,
+                      listen: false,
+                    );
+                    await provider.saveStudentResult(
                       examId: _selectedExamId!,
                       studentId: student['studentId'].toString(),
                       resultData: updatedStudent,
                     );
                   }
 
-                  Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 }
               },
               child: Text("save_grade".tr()),
@@ -489,22 +523,27 @@ class _PublishResultsScreenState extends State<PublishResultsScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               if (_selectedExamId != null) {
-                // Bulk save graded results directly via AppData helper function
-                AppData.saveBulkResultsForExam(
+                final provider = Provider.of<AppDataProvider>(
+                  context,
+                  listen: false,
+                );
+                await provider.saveBulkResultsForExam(
                   examId: _selectedExamId!,
                   studentResults: gradedStudents,
                 );
               }
 
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("results_published_success".tr()),
-                  backgroundColor: const Color(0xFF0A5C36),
-                ),
-              );
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("results_published_success".tr()),
+                    backgroundColor: const Color(0xFF0A5C36),
+                  ),
+                );
+              }
             },
             child: Text(
               "publish".tr(),

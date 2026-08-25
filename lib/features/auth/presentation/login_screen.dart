@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:halaqat/features/admin_portal/presentation/admin_dashboard_screen.dart';
 import 'package:halaqat/features/daily_logging/presentation/teacher_main_navigation.dart';
 import 'package:halaqat/features/parent_portal/presentation/parent_dashboard.dart';
@@ -31,39 +34,62 @@ class _SplashScreenState extends State<SplashScreen>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
     _controller.forward();
-    _navigateToLogin();
+    _checkAuthState();
   }
 
-  void _navigateToLogin() async {
-    // Simulate initial asset loading or DB initialization
-    Map<String, dynamic> loginInfo = await AppData.getLoginInfo();
-    await AppData.loadCachedData();
-    bool isLoggedIn = loginInfo['isLoggedIn'] ?? false;
-    String role = loginInfo['role'] ?? '';
-    if (isLoggedIn && role == 'teacher') {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const TeacherMainNavigation(),
-          ),
-        );
-      }
-    } else if (isLoggedIn && role == 'admin') {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-        );
-      }
-    } else {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
+  Future<void> _checkAuthState() async {
+    // Small artificial delay for splash animation
+    await Future.delayed(const Duration(seconds: 2));
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      try {
+        // Fetch user metadata/role from Firestore
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists && mounted) {
+          final role = doc.data()?['role'] as String? ?? '';
+          _navigateBasedOnRole(role);
+          return;
+        }
+      } catch (e) {
+        debugPrint("Error fetching user role: $e");
       }
     }
+
+    // Default: Fallback to LoginScreen if user is null or role fetch failed
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    }
+  }
+
+  void _navigateBasedOnRole(String role) {
+    Widget destination;
+    switch (role.toLowerCase()) {
+      case 'admin':
+        destination = const AdminDashboardScreen();
+        break;
+      case 'teacher':
+        destination = const TeacherMainNavigation();
+        break;
+      case 'parent':
+        destination = const ParentDashboard();
+        break;
+      default:
+        destination = const LoginScreen();
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => destination),
+    );
   }
 
   @override
@@ -75,14 +101,13 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A5C36), // Deep Islamic Green
+      backgroundColor: const Color(0xFF0A5C36),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Beautiful Quran/Education Brand Icon Container
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -145,6 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   bool rememberMe = false;
+
   @override
   void initState() {
     super.initState();
@@ -161,77 +187,91 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _handleLogin() async {
+  Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    // Simulate network latency
-    await Future.delayed(const Duration(seconds: 2));
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    final email = _emailController.text.trim().toLowerCase();
-    //final password = _passwordController.text;
+    try {
+      // 1. Authenticate with Firebase Auth
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+      final uid = userCredential.user?.uid;
 
-    // todo: [DATABASE/AUTH INTEGRATION]
-    // 1. Call your Auth Repository/Service here.
-    //    e.g., final user = await authService.signIn(email, password);
-    // 2. Fetch user role from your SQL Server or Local Database.
-    // 3. Update application state (e.g., Riverpod, Bloc, or Provider).
+      if (uid != null) {
+        // 2. Fetch User Role from Firestore (`users` collection)
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get();
 
-    setState(() => _isLoading = false);
+        if (userDoc.exists) {
+          String role = userDoc.get('role') ?? 'teacher';
 
-    if (mounted) {
-      // Mock Routing validation
-      if (email == "admin" || email == "admin@test.com") {
-        await AppData.SaveLoginInfo('admin_uid_001', 'admin', true);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-        );
-      } else if (email == "parent" || email == "parent@test.com") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const ParentDashboard()),
-        );
-      } else {
-        Map<String, dynamic> res = AppData.validateLoginUser(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-        );
-        if (res['status'] == "success") {
-          String uid = res['userId'];
-          String role = res['role'];
-          await AppData.SaveLoginInfo(uid, role, true);
+          // Handle Remember Me preference
           if (rememberMe) {
-            // Pass the entered username or phone number controller text
-            await AppData.saveRememberedUsername(_emailController.text.trim());
+            await AppData.saveRememberedUsername(email);
           } else {
-            // Clear any previously saved username if "Remember Me" is unchecked
             await AppData.clearRememberedUsername();
           }
-          if (res['role'] == "teacher") {
+
+          if (!mounted) return;
+
+          AppData.SaveLoginInfo(uid, role, true);
+          // 3. Navigate according to role
+          if (role == 'admin') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AdminDashboardScreen(),
+              ),
+            );
+          } else if (role == 'teacher') {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => const TeacherMainNavigation(),
               ),
             );
-          } else if (res['role'] == "parent") {
+          } else if (role == 'parent') {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const ParentDashboard()),
             );
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(res['message'] ?? "Login Failed"),
-              backgroundColor: const Color.fromARGB(255, 240, 6, 6),
-            ),
-          );
+          _showErrorSnackBar("User document not found in database.");
         }
       }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = "Login Failed";
+      if (e.code == 'user-not-found') {
+        errorMessage = "No user found for that email.";
+      } else if (e.code == 'wrong-password') {
+        errorMessage = "Incorrect password.";
+      } else if (e.code == 'invalid-email') {
+        errorMessage = "Invalid email format.";
+      } else if (e.code == 'user-disabled') {
+        errorMessage = "This user account has been disabled.";
+      } else if (e.message != null) {
+        errorMessage = e.message!;
+      }
+
+      if (mounted) _showErrorSnackBar(errorMessage);
+    } catch (e) {
+      if (mounted) _showErrorSnackBar("An error occurred: ${e.toString()}");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+    );
   }
 
   @override
@@ -311,7 +351,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // Email / Username Input
+                // Email Input
                 Text(
                   "email_or_username".tr(),
                   style: const TextStyle(
@@ -325,9 +365,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    hintText: "phone_number_hint".tr(),
+                    hintText: "admin@halaqat.com",
                     prefixIcon: const Icon(
-                      Icons.phone_outlined,
+                      Icons.email_outlined,
                       color: Color(0xFF94A3B8),
                     ),
                     filled: true,
@@ -456,9 +496,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildQuickRoleBadge("Admin", "admin"),
-                    _buildQuickRoleBadge("Teacher", "teacher"),
-                    _buildQuickRoleBadge("Parent", "parent"),
+                    _buildQuickRoleBadge("Admin", "admin@test.com"),
+                    _buildQuickRoleBadge("Teacher", "teacher@test.com"),
+                    _buildQuickRoleBadge("Parent", "parent@test.com"),
                   ],
                 ),
               ],
@@ -469,11 +509,11 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildQuickRoleBadge(String label, String username) {
+  Widget _buildQuickRoleBadge(String label, String email) {
     return GestureDetector(
       onTap: () {
-        _emailController.text = username;
-        _passwordController.text = "password";
+        _emailController.text = email;
+        _passwordController.text = "123456";
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

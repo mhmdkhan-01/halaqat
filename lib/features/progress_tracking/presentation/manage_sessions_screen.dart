@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
+import 'package:provider/provider.dart';
 
 class ManageSessionsScreen extends StatefulWidget {
   const ManageSessionsScreen({super.key});
@@ -10,18 +11,13 @@ class ManageSessionsScreen extends StatefulWidget {
 }
 
 class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
-  late Future<List<Map<String, dynamic>>> _sessionsFuture;
-  List<Map<String, dynamic>> _loadedSessions = [];
-  bool _isInitialized = false;
-
   @override
   void initState() {
     super.initState();
-    _loadSessions();
-  }
-
-  void _loadSessions() {
-    _sessionsFuture = AppData.getAvailableSessions();
+    // Load sessions once widget mounts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppDataProvider>().loadSessions();
+    });
   }
 
   @override
@@ -35,35 +31,30 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1E293B),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _sessionsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !_isInitialized) {
+      body: Consumer<AppDataProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.hasError && !_isInitialized) {
+          if (provider.hasError) {
             return Center(
-              child: Text("Error loading sessions: ${snapshot.error}"),
+              child: Text("Error loading sessions: ${provider.errorMessage}"),
             );
           }
 
-          if (!_isInitialized && snapshot.hasData) {
-            _loadedSessions = snapshot.data!;
-            _isInitialized = true;
-          }
+          final sessions = provider.sessions;
 
-          if (_loadedSessions.isEmpty) {
+          if (sessions.isEmpty) {
             return _buildEmptyState();
           }
 
           return ListView.builder(
             padding: const EdgeInsets.all(16.0),
             physics: const BouncingScrollPhysics(),
-            itemCount: _loadedSessions.length,
+            itemCount: sessions.length,
             itemBuilder: (context, index) {
-              final session = _loadedSessions[index];
+              final session = sessions[index];
               return _buildSessionCard(session, index);
             },
           );
@@ -166,17 +157,21 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 6.0),
-          //fix this as it is overflowing.
+          // Fixed row overflow using Expanded + TextOverflow
           child: Row(
             children: [
               const Icon(Icons.schedule, size: 14, color: Color(0xFF64748B)),
               const SizedBox(width: 6),
-              Text(
-                "$startTimeStr - $endTimeStr",
-                style: const TextStyle(
-                  color: Color(0xFF64748B),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 10,
+              Expanded(
+                child: Text(
+                  "$startTimeStr - $endTimeStr",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],
@@ -195,7 +190,7 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
                 Icons.delete_outline_rounded,
                 color: Colors.redAccent,
               ),
-              onPressed: () => _confirmDelete(session['id'], index),
+              onPressed: () => _confirmDelete(session['id'].toString()),
             ),
           ],
         ),
@@ -402,20 +397,15 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
                             "endTime": selectedEndTime,
                           };
 
-                          setState(() {
-                            if (isEditing && index != null) {
-                              // Sync to AppData & local list
-                              AppData.updateSessionById(
-                                session['id'].toString(),
-                                newSessionData,
-                              );
-                              _loadedSessions[index] = newSessionData;
-                            } else {
-                              // Sync to AppData & local list
-                              AppData.addSession(newSessionData);
-                              _loadedSessions.add(newSessionData);
-                            }
-                          });
+                          final provider = context.read<AppDataProvider>();
+                          if (isEditing) {
+                            provider.updateSessionById(
+                              session['id'].toString(),
+                              newSessionData,
+                            );
+                          } else {
+                            provider.addSession(newSessionData);
+                          }
 
                           Navigator.pop(context);
                         }
@@ -438,7 +428,7 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
     );
   }
 
-  void _confirmDelete(String sessionId, int index) {
+  void _confirmDelete(String sessionId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -454,11 +444,7 @@ class _ManageSessionsScreenState extends State<ManageSessionsScreen> {
           ),
           TextButton(
             onPressed: () {
-              setState(() {
-                // Sync to AppData & local list
-                AppData.deleteSessionById(sessionId);
-                _loadedSessions.removeAt(index);
-              });
+              context.read<AppDataProvider>().deleteSessionById(sessionId);
               Navigator.pop(context);
             },
             child: Text(

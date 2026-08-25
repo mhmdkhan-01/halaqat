@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class AttendanceTab extends StatefulWidget {
   const AttendanceTab({Key? key}) : super(key: key);
@@ -9,58 +11,43 @@ class AttendanceTab extends StatefulWidget {
 }
 
 class _AttendanceTabState extends State<AttendanceTab> {
-  late Future<Map<String, dynamic>> _screenDataFuture;
-
-  // Real data parsed from AppData
-  List<Map<String, dynamic>> _availableSessions = [];
-  List<Map<String, dynamic>> _students = [];
-
-  // Tracks selected session IDs or names
+  // Tracks selected session names
   final List<String> _selectedSessions = [];
-
-  // Track WHICH session IDs/names are submitted/locked
-  final Set<String> _submittedSessions = {};
 
   // Track local attendance status for students (studentId -> status)
   final Map<String, String> _studentAttendance = {};
 
+  bool _isSaving = false;
+
   @override
   void initState() {
     super.initState();
-    _screenDataFuture = fetchScreenData();
+    // Pre-select first session once data is available in provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<AppDataProvider>(context, listen: false);
+      if (_selectedSessions.isEmpty && provider.availableSessions.isNotEmpty) {
+        setState(() {
+          _selectedSessions.add(
+            provider.availableSessions.first['name'].toString(),
+          );
+        });
+      }
+    });
   }
 
-  Future<Map<String, dynamic>> fetchScreenData() async {
-    final rawSessions = AppData.getSessions();
-    final rawStudents = AppData.getStudents();
-    // Cast explicitly
-    _availableSessions = List<Map<String, dynamic>>.from(rawSessions);
-    _students = List<Map<String, dynamic>>.from(rawStudents);
-
-    // Initialize default selection if empty
-    if (_selectedSessions.isEmpty && _availableSessions.isNotEmpty) {
-      _selectedSessions.add(_availableSessions.first['name'].toString());
-    }
-
-    // Initialize default status for students
-    for (var student in _students) {
-      final id = student['studentId'].toString();
-      _studentAttendance.putIfAbsent(id, () => 'Present');
-    }
-    var submittedForToday = AppData.getSubmittedSessionsForDate(
-      DateTime.now().toString().split(' ')[0],
-    );
-    _submittedSessions.addAll(submittedForToday);
-    return {'sessions': _availableSessions, 'students': _students};
-  }
-
-  // Helper: Check if ALL currently selected sessions are submitted
-  bool get _areAllSelectedSessionsSubmitted {
+  // Helper: Check if ALL currently selected sessions are submitted for today
+  bool _areAllSelectedSessionsSubmitted(AppDataProvider provider) {
     if (_selectedSessions.isEmpty) return false;
-    return _selectedSessions.every((s) => _submittedSessions.contains(s));
+    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final submittedForToday = provider.submittedSessions[todayKey] ?? {};
+
+    return _selectedSessions.every((s) => submittedForToday.contains(s));
   }
 
-  void _showSessionSelectionDialog() {
+  void _showSessionSelectionDialog(AppDataProvider provider) {
+    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final submittedForToday = provider.submittedSessions[todayKey] ?? {};
+
     showDialog(
       context: context,
       builder: (context) {
@@ -73,15 +60,12 @@ class _AttendanceTabState extends State<AttendanceTab> {
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: _availableSessions.map((sessionMap) {
+                    children: provider.availableSessions.map((sessionMap) {
                       final sessionName = sessionMap['name'].toString();
                       final isSelected = _selectedSessions.contains(
                         sessionName,
                       );
-                      final isLocked = AppData.isSessionSubmitted(
-                        DateTime.now().toString().split(' ')[0],
-                        sessionName,
-                      );
+                      final isLocked = submittedForToday.contains(sessionName);
 
                       return CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
@@ -134,7 +118,10 @@ class _AttendanceTabState extends State<AttendanceTab> {
     );
   }
 
-  void _submitAttendance() {
+  void _submitAttendance(AppDataProvider provider) {
+    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final submittedForToday = provider.submittedSessions[todayKey] ?? {};
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -155,7 +142,7 @@ class _AttendanceTabState extends State<AttendanceTab> {
             ),
             onPressed: () async {
               for (var session in _selectedSessions) {
-                if (_submittedSessions.contains(session)) {
+                if (submittedForToday.contains(session)) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -164,34 +151,44 @@ class _AttendanceTabState extends State<AttendanceTab> {
                       backgroundColor: Colors.red,
                     ),
                   );
-                  Navigator.pop(context); // Close the dialog
+                  Navigator.pop(context);
                   return;
                 }
               }
 
-              Navigator.pop(context);
+              Navigator.pop(context); // Close dialog
 
-              // 1. Call AppData to save log
-              bool success = await AppData.saveAttendanceLog(
-                date: DateTime.now(),
-                sessionNames: _selectedSessions,
-                studentAttendance: _studentAttendance,
-              );
+              setState(() => _isSaving = true);
 
-              if (success) {
-                AppData.submitSessionForDate(
-                  DateTime.now().toString().split(' ')[0],
-                  _selectedSessions,
+              try {
+                await provider.saveAttendanceLog(
+                  date: DateTime.now(),
+                  sessionNames: _selectedSessions,
+                  studentAttendance: _studentAttendance,
                 );
-                _submittedSessions.addAll(_selectedSessions);
-                setState(() {});
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Attendance saved & locked successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                // Lock sessions locally in provider
+                provider.markSessionsSubmitted(todayKey, _selectedSessions);
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Attendance saved & locked successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to save attendance: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } finally {
+                if (mounted) setState(() => _isSaving = false);
               }
             },
             child: const Text('Submit & Lock'),
@@ -203,272 +200,288 @@ class _AttendanceTabState extends State<AttendanceTab> {
 
   @override
   Widget build(BuildContext context) {
-    final isCurrentSelectionLocked = _areAllSelectedSessionsSubmitted;
+    final provider = Provider.of<AppDataProvider>(context);
+
+    if (provider.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final students = provider.students;
+    final isCurrentSelectionLocked = _areAllSelectedSessionsSubmitted(provider);
+
+    // Initialize default status 'Present' for new students in list
+    for (var student in students) {
+      final id = student['studentId'].toString();
+      _studentAttendance.putIfAbsent(id, () => 'Present');
+    }
 
     return Scaffold(
       body: SafeArea(
-        child: FutureBuilder<Map<String, dynamic>>(
-          future: _screenDataFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-
-            return Column(
-              children: [
-                if (isCurrentSelectionLocked)
-                  Container(
-                    width: double.infinity,
-                    color: Colors.amber.shade100,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 16,
+        child: Column(
+          children: [
+            if (isCurrentSelectionLocked)
+              Container(
+                width: double.infinity,
+                color: Colors.amber.shade100,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 16,
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.lock, color: Colors.amber, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Attendance is locked for the selected session(s).',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.lock, color: Colors.amber, size: 20),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Attendance is locked for the selected session(s).',
+                  ],
+                ),
+              ),
+
+            // Top Session Selector
+            Card(
+              margin: const EdgeInsets.all(12),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.event_note, color: Colors.teal),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Active Session(s)',
                             style: TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: _selectedSessions.map((s) {
+                              final todayKey = DateFormat(
+                                'yyyy-MM-dd',
+                              ).format(DateTime.now());
+                              final isLocked =
+                                  provider.submittedSessions[todayKey]
+                                      ?.contains(s) ??
+                                  false;
 
-                // Top Session Selector
-                Card(
-                  margin: const EdgeInsets.all(12),
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.event_note, color: Colors.teal),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Active Session(s)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.w600,
+                              return Chip(
+                                avatar: isLocked
+                                    ? const Icon(
+                                        Icons.lock,
+                                        size: 14,
+                                        color: Colors.amber,
+                                      )
+                                    : null,
+                                label: Text(
+                                  s,
+                                  style: const TextStyle(fontSize: 12),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                children: _selectedSessions.map((s) {
-                                  final isLocked = _submittedSessions.contains(
-                                    s,
-                                  );
-                                  return Chip(
-                                    avatar: isLocked
-                                        ? const Icon(
-                                            Icons.lock,
-                                            size: 14,
-                                            color: Colors.amber,
-                                          )
-                                        : null,
-                                    label: Text(
-                                      s,
-                                      style: const TextStyle(fontSize: 12),
+                                backgroundColor: isLocked
+                                    ? Colors.amber.shade50
+                                    : Colors.teal.shade50,
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.filter_list, color: Colors.teal),
+                      onPressed: () => _showSessionSelectionDialog(provider),
+                      tooltip: 'Select Sessions',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Student List
+            Expanded(
+              child: students.isEmpty
+                  ? const Center(child: Text('No students found.'))
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      itemCount: students.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final student = students[index];
+                        final studentId = student['studentId'].toString();
+                        final studentName =
+                            student['name'] ?? 'Unknown Student';
+                        final teacherName =
+                            student['assignedTeacherName'] ?? 'Unassigned';
+
+                        final String currentStatus =
+                            _studentAttendance[studentId] ?? 'Present';
+
+                        return Card(
+                          elevation: 1,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      studentName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
-                                    backgroundColor: isLocked
-                                        ? Colors.amber.shade50
-                                        : Colors.teal.shade50,
-                                    visualDensity: VisualDensity.compact,
-                                    padding: EdgeInsets.zero,
-                                  );
-                                }).toList(),
-                              ),
-                            ],
+                                    Text(
+                                      teacherName,
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Status Toggles
+                                Row(
+                                  children: [
+                                    _buildStatusChip(
+                                      label: 'Present',
+                                      activeColor: Colors.green,
+                                      isSelected: currentStatus == 'Present',
+                                      onTap: isCurrentSelectionLocked
+                                          ? null
+                                          : () {
+                                              setState(() {
+                                                _studentAttendance[studentId] =
+                                                    'Present';
+                                              });
+                                            },
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildStatusChip(
+                                      label: 'Absent',
+                                      activeColor: Colors.red,
+                                      isSelected: currentStatus == 'Absent',
+                                      onTap: isCurrentSelectionLocked
+                                          ? null
+                                          : () {
+                                              setState(() {
+                                                _studentAttendance[studentId] =
+                                                    'Absent';
+                                              });
+                                            },
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildStatusChip(
+                                      label: 'Late',
+                                      activeColor: Colors.orange,
+                                      isSelected: currentStatus == 'Late',
+                                      onTap: isCurrentSelectionLocked
+                                          ? null
+                                          : () {
+                                              setState(() {
+                                                _studentAttendance[studentId] =
+                                                    'Late';
+                                              });
+                                            },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.filter_list,
-                            color: Colors.teal,
-                          ),
-                          onPressed: _showSessionSelectionDialog,
-                          tooltip: 'Select Sessions',
-                        ),
-                      ],
+                        );
+                      },
+                    ),
+            ),
+
+            // Bottom Action Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    disabledBackgroundColor: Colors.grey.shade400,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                ),
-
-                // Student List
-                Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    itemCount: _students.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final student = _students[index];
-                      final studentId = student['studentId'].toString();
-                      final studentName = student['name'] ?? 'Unknown Student';
-                      final teacherName =
-                          student['assignedTeacherName'] ?? 'Unassigned';
-
-                      final String currentStatus =
-                          _studentAttendance[studentId] ?? 'Present';
-
-                      return Card(
-                        elevation: 1,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    studentName,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  Text(
-                                    teacherName,
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-
-                              // Status Toggles
-                              Row(
-                                children: [
-                                  _buildStatusChip(
-                                    label: 'Present',
-                                    activeColor: Colors.green,
-                                    isSelected: currentStatus == 'Present',
-                                    onTap: isCurrentSelectionLocked
-                                        ? null
-                                        : () {
-                                            setState(() {
-                                              _studentAttendance[studentId] =
-                                                  'Present';
-                                            });
-                                          },
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _buildStatusChip(
-                                    label: 'Absent',
-                                    activeColor: Colors.red,
-                                    isSelected: currentStatus == 'Absent',
-                                    onTap: isCurrentSelectionLocked
-                                        ? null
-                                        : () {
-                                            setState(() {
-                                              _studentAttendance[studentId] =
-                                                  'Absent';
-                                            });
-                                          },
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _buildStatusChip(
-                                    label: 'Late',
-                                    activeColor: Colors.orange,
-                                    isSelected: currentStatus == 'Late',
-                                    onTap: isCurrentSelectionLocked
-                                        ? null
-                                        : () {
-                                            setState(() {
-                                              _studentAttendance[studentId] =
-                                                  'Late';
-                                            });
-                                          },
-                                  ),
-                                ],
-                              ),
-                            ],
+                  onPressed: (isCurrentSelectionLocked || _isSaving)
+                      ? null
+                      : () => _submitAttendance(provider),
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // Bottom Action Bar
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 4,
-                        offset: Offset(0, -2),
-                      ),
-                    ],
-                  ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        disabledBackgroundColor: Colors.grey.shade400,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: isCurrentSelectionLocked
-                          ? null
-                          : _submitAttendance,
-                      icon: Icon(
-                        isCurrentSelectionLocked
-                            ? Icons.check_circle
-                            : Icons.save,
-                        color: Colors.white,
-                      ),
-                      label: Text(
-                        isCurrentSelectionLocked
-                            ? 'Session Attendance Submitted'
-                            : 'Submit Attendance',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        )
+                      : Icon(
+                          isCurrentSelectionLocked
+                              ? Icons.check_circle
+                              : Icons.save,
                           color: Colors.white,
                         ),
-                      ),
+                  label: Text(
+                    isCurrentSelectionLocked
+                        ? 'Session Attendance Submitted'
+                        : (_isSaving ? 'Saving...' : 'Submit Attendance'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                 ),
-              ],
-            );
-          },
+              ),
+            ),
+          ],
         ),
       ),
     );

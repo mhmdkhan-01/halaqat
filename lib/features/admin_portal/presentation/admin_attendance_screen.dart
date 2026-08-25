@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class AdminAttendanceScreen extends StatefulWidget {
   const AdminAttendanceScreen({Key? key}) : super(key: key);
@@ -12,40 +13,10 @@ class AdminAttendanceScreen extends StatefulWidget {
 class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   DateTime _selectedDate = DateTime.now();
 
-  // Data holders
-  List<Map<String, dynamic>> _students = [];
-  List<String> _sessions = [];
-  Map<String, Map<String, String>> _dailyLogs = {};
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDataForSelectedDate();
-  }
-
-  Future<void> _loadDataForSelectedDate() async {
-    setState(() => _isLoading = true);
-
-    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
-
-    final studentsList = AppData.getStudents();
-    final sessionList = AppData.getAvailableSessionsNames();
-    final logs = AppData.getAttendanceLogsForDate(formattedDate);
-
-    setState(() {
-      _students = studentsList;
-      _sessions = sessionList;
-      _dailyLogs = logs;
-      _isLoading = false;
-    });
-  }
-
   void _changeDate(int days) {
     setState(() {
       _selectedDate = _selectedDate.add(Duration(days: days));
     });
-    _loadDataForSelectedDate();
   }
 
   Future<void> _pickDate() async {
@@ -59,12 +30,18 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       setState(() {
         _selectedDate = picked;
       });
-      _loadDataForSelectedDate();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<AppDataProvider>();
+    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+    final students = provider.students;
+    final sessions = provider.getAvailableSessionsNames();
+    final dailyLogs = provider.getAttendanceLogsForDate(formattedDate);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('All Students Attendance'),
@@ -78,11 +55,11 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
           // ------------------ TABLE CONTENT ------------------
           Expanded(
-            child: _isLoading
+            child: provider.isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _students.isEmpty
+                : students.isEmpty
                 ? const Center(child: Text("No students found."))
-                : _buildAttendanceTable(),
+                : _buildAttendanceTable(students, sessions, dailyLogs),
           ),
         ],
       ),
@@ -110,22 +87,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 children: [
-                  if (!isToday) ...[
-                    Text(
-                      DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Text(
+                    DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
+                    style: TextStyle(
+                      fontSize: isToday ? 12 : 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ] else
-                    Text(
-                      DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  ),
                   if (isToday) ...[
                     const SizedBox(width: 8),
                     Container(
@@ -170,7 +138,11 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  Widget _buildAttendanceTable() {
+  Widget _buildAttendanceTable(
+    List<Map<String, dynamic>> students,
+    List<String> sessions,
+    Map<String, Map<String, String>> dailyLogs,
+  ) {
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
       child: SingleChildScrollView(
@@ -188,15 +160,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             Theme.of(context).primaryColor.withOpacity(0.05),
           ),
           columns: [
-            // Fixed first column for Student Info
             const DataColumn(
               label: Text(
                 'Student Name',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
             ),
-            // Dynamically create columns for each Session
-            ..._sessions.map((sessionName) {
+            ...sessions.map((sessionName) {
               return DataColumn(
                 label: Text(
                   sessionName,
@@ -208,14 +178,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
               );
             }).toList(),
           ],
-          rows: _students.map((student) {
+          rows: students.map((student) {
             final studentId = student['studentId'] ?? '';
             final studentName = student['name'] ?? 'Unknown';
             final parentName = student['assignedParentName'] ?? 'Unassigned';
 
             return DataRow(
               cells: [
-                // Student Name Cell with S/O
                 DataCell(
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -239,9 +208,12 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                     ],
                   ),
                 ),
-                // Session Status Cells
-                ..._sessions.map((sessionName) {
-                  final status = _getAttendanceStatus(sessionName, studentId);
+                ...sessions.map((sessionName) {
+                  final status = _getAttendanceStatus(
+                    dailyLogs,
+                    sessionName,
+                    studentId,
+                  );
                   return DataCell(_buildStatusBadge(status));
                 }).toList(),
               ],
@@ -252,9 +224,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  String _getAttendanceStatus(String sessionName, String studentId) {
-    if (_dailyLogs.containsKey(sessionName)) {
-      final sessionMap = _dailyLogs[sessionName];
+  String _getAttendanceStatus(
+    Map<String, Map<String, String>> dailyLogs,
+    String sessionName,
+    String studentId,
+  ) {
+    if (dailyLogs.containsKey(sessionName)) {
+      final sessionMap = dailyLogs[sessionName];
       if (sessionMap != null && sessionMap.containsKey(studentId)) {
         return sessionMap[studentId]!;
       }

@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:halaqat/features/progress_tracking/data/app_data.dart';
+import 'package:flutter/material.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-// Import your AppData file here
-// import 'path_to_app_data.dart';
 
 class StudentHistoryScreen extends StatefulWidget {
   final Map<String, dynamic> student;
@@ -17,23 +16,31 @@ class StudentHistoryScreen extends StatefulWidget {
 class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
   late String _parentPhone;
   late double _hifzPercentage;
-  late List<Map<String, dynamic>> _historyLogs;
 
   @override
   void initState() {
     super.initState();
-    _parentPhone = widget.student['parentPhone'] ?? "N/A";
+    _parentPhone = "Loading...";
 
-    // Fetch logs specific to this student from AppData
-    _historyLogs = AppData.getProgressLogs()
-        .where((log) => log['studentId'] == widget.student['studentId'])
-        .toList();
-
-    // Calculate completion progress based on current Para
     int currentPara = widget.student['para'] is int
         ? widget.student['para']
-        : int.tryParse(widget.student['para'].toString()) ?? 1;
+        : int.tryParse(widget.student['para']?.toString() ?? '1') ?? 1;
     _hifzPercentage = (currentPara / 30).clamp(0.0, 1.0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchParentPhone();
+    });
+  }
+
+  void _fetchParentPhone() {
+    final provider = Provider.of<AppDataProvider>(context, listen: false);
+    final parentId = widget.student['parentId'] ?? "";
+
+    // Call the synchronous getParentPhone method on the active provider
+    final phone = provider.getParentPhone(parentId);
+
+    setState(() {
+      _parentPhone = phone;
+    });
   }
 
   void _launchWhatsApp() async {
@@ -66,207 +73,218 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Extract metrics dynamically
-    final latestLog = _historyLogs.firstWhere(
-      (log) => log['sabaq'] != null,
-      orElse: () => <String, String?>{},
-    );
+    return Consumer<AppDataProvider>(
+      builder: (context, dataProvider, child) {
+        final studentId = widget.student['studentId'] ?? '';
 
-    final currentSura = latestLog.isNotEmpty && latestLog['sabaq'] != null
-        ? latestLog['sabaq']['surah'] ?? "N/A"
-        : "N/A";
+        // Retrieve student-specific progress logs directly from provider
+        final historyLogs = dataProvider.getProgressLogsForStudent(studentId);
 
-    final currentPara = widget.student['para'] ?? "1";
+        // Extract metrics dynamically from latest log
+        final latestLog = historyLogs.firstWhere(
+          (log) => log['sabaq'] != null,
+          orElse: () => <String, dynamic>{},
+        );
 
-    // Dynamic attendance count
-    final totalPresent = AppData.getTotalAttendanceCountForStudent(
-      widget.student['studentId'],
-      'Present',
-    );
-    final totalAbsent = AppData.getTotalAttendanceCountForStudent(
-      widget.student['studentId'],
-      'Absent',
-    );
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(widget.student['name'] ?? "Student History"),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1E293B),
-      ),
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // Section 1: Parent Info & WhatsApp Action
-          SliverToBoxAdapter(
-            child: Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "parent_guardian".tr(),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF64748B),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.student['parent'] ?? "Unassigned",
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B),
-                            ),
-                          ),
-                          Text(
-                            _parentPhone,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF94A3B8),
-                            ),
-                          ),
-                        ],
-                      ),
-                      IconButton(
-                        onPressed: _launchWhatsApp,
-                        icon: const Icon(
-                          Icons.message,
-                          color: Color(0xFF25D366),
-                          size: 32,
-                        ),
-                        tooltip: "Chat via WhatsApp",
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 32),
+        final currentSura = latestLog.isNotEmpty && latestLog['sabaq'] != null
+            ? latestLog['sabaq']['surah'] ?? "N/A"
+            : "N/A";
 
-                  // Section 2: Stats Grid
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildQuickStatTile(
-                        "Current Sura",
-                        currentSura,
-                        Colors.teal,
-                      ),
-                      _buildQuickStatTile(
-                        "Current Para",
-                        "Para $currentPara",
-                        Colors.indigo,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 20),
+        final currentPara = widget.student['para'] ?? "1";
 
-                  // Section 2: Stats Grid
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildQuickStatTile(
-                        "Attendance",
-                        "$totalPresent Present ",
-                        Colors.orange,
-                      ),
-                      _buildQuickStatTile(
-                        "Attendance",
-                        "$totalAbsent Absent ",
-                        Colors.red,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
+        // Dynamic attendance counts
+        final totalPresent = dataProvider.getTotalAttendanceCountForStudent(
+          studentId,
+          'Present',
+        );
+        final totalAbsent = dataProvider.getTotalAttendanceCountForStudent(
+          studentId,
+          'Absent',
+        );
 
-                  // Section 3: Progress Bar
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          appBar: AppBar(
+            title: Text(widget.student['name'] ?? "Student History"),
+            centerTitle: true,
+            elevation: 0,
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF1E293B),
+          ),
+          body: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Section 1: Parent Info & WhatsApp Action
+              SliverToBoxAdapter(
+                child: Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            "hifz_completion_progress".tr(),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF475569),
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "parent_guardian".tr(),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.student['parent'] ?? "Unassigned",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                              Text(
+                                _parentPhone,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            "${(_hifzPercentage * 100).toStringAsFixed(0)}%",
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0A5C36),
+                          IconButton(
+                            onPressed: _launchWhatsApp,
+                            icon: const Icon(
+                              Icons.message,
+                              color: Color(0xFF25D366),
+                              size: 32,
                             ),
+                            tooltip: "Chat via WhatsApp",
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: _hifzPercentage,
-                        backgroundColor: const Color(0xFF0A5C36).withAlpha(30),
-                        color: const Color(0xFF0A5C36),
-                        minHeight: 10,
-                        borderRadius: BorderRadius.circular(8),
+                      const Divider(height: 32),
+
+                      // Section 2: Stats Grid
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildQuickStatTile(
+                            "Current Sura",
+                            currentSura,
+                            Colors.teal,
+                          ),
+                          _buildQuickStatTile(
+                            "Current Para",
+                            "Para $currentPara",
+                            Colors.indigo,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildQuickStatTile(
+                            "Attendance",
+                            "$totalPresent Present",
+                            Colors.orange,
+                          ),
+                          _buildQuickStatTile(
+                            "Attendance",
+                            "$totalAbsent Absent",
+                            Colors.red,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Section 3: Progress Bar
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "hifz_completion_progress".tr(),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+                              Text(
+                                "${(_hifzPercentage * 100).toStringAsFixed(0)}%",
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0A5C36),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(
+                            value: _hifzPercentage,
+                            backgroundColor: const Color(
+                              0xFF0A5C36,
+                            ).withAlpha(30),
+                            color: const Color(0xFF0A5C36),
+                            minHeight: 10,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          // Section 4: History Logs Header
-          SliverPadding(
-            padding: const EdgeInsets.all(20),
-            sliver: SliverToBoxAdapter(
-              child: Text(
-                "learning_history_logs".tr(),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
                 ),
               ),
-            ),
-          ),
 
-          // Section 5: History Card List
-          if (_historyLogs.isEmpty)
-            const SliverToBoxAdapter(
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20.0),
+              // Section 4: History Logs Header
+              SliverPadding(
+                padding: const EdgeInsets.all(20),
+                sliver: SliverToBoxAdapter(
                   child: Text(
-                    "No history logs found for this student.",
-                    style: TextStyle(color: Color(0xFF94A3B8)),
+                    "learning_history_logs".tr(),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B),
+                    ),
                   ),
                 ),
               ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final log = _historyLogs[index];
-                  return _buildDailyHistoryCard(log);
-                }, childCount: _historyLogs.length),
-              ),
-            ),
-        ],
-      ),
+
+              // Section 5: History Card List
+              if (historyLogs.isEmpty)
+                const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Text(
+                        "No history logs found for this student.",
+                        style: TextStyle(color: Color(0xFF94A3B8)),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final log = historyLogs[index];
+                      return _buildDailyHistoryCard(log);
+                    }, childCount: historyLogs.length),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -305,8 +323,26 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
   }
 
   Widget _buildDailyHistoryCard(Map<String, dynamic> log) {
-    final bool isAbsent = log['attendanceStatus'] == 'absent';
+    final bool isAbsent =
+        log['attendanceStatus']?.toString().toLowerCase() == 'absent';
     final sabaq = log['sabaq'];
+
+    // Safe extraction for remark/grade fields
+    final String sabaqRemark =
+        log['sabaqRemark'] ??
+        (log['grade'] != null && (log['grade'] as List).isNotEmpty
+            ? log['grade'][0]
+            : 'N/A');
+    final String sabqiRemark =
+        log['sabqiRemark'] ??
+        (log['grade'] != null && (log['grade'] as List).length > 1
+            ? log['grade'][1]
+            : 'N/A');
+    final String manzilRemark =
+        log['manzilRemark'] ??
+        (log['grade'] != null && (log['grade'] as List).length > 2
+            ? log['grade'][2]
+            : 'N/A');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -393,21 +429,21 @@ class _StudentHistoryScreenState extends State<StudentHistoryScreen> {
                     _buildProgressComponentRow(
                       "Sabaq (New)",
                       "${sabaq['surah']} (Para ${sabaq['para']} - Lines ${sabaq['lines']})",
-                      log['grade'][0] ?? 'N/A',
+                      sabaqRemark,
                       Colors.teal,
                     ),
                   if (sabaq != null) const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Sabqi (Recent)",
                     log['sabqi'] ?? 'N/A',
-                    log['grade'][1] ?? 'N/A',
+                    sabqiRemark,
                     Colors.indigo,
                   ),
                   const Divider(height: 20),
                   _buildProgressComponentRow(
                     "Manzil (Revision)",
                     log['manzil'] ?? 'N/A',
-                    log['grade'][2] ?? 'N/A',
+                    manzilRemark,
                     Colors.amber[800]!,
                   ),
                 ],
