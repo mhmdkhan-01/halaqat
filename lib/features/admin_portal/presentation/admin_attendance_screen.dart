@@ -181,7 +181,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           rows: students.map((student) {
             final studentId = student['studentId'] ?? '';
             final studentName = student['name'] ?? 'Unknown';
-            final parentName = student['assignedParentName'] ?? 'Unassigned';
+            final parentName = student['parent'] ?? 'Unassigned';
 
             return DataRow(
               cells: [

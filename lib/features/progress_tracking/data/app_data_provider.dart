@@ -34,7 +34,7 @@ class AppDataProvider extends ChangeNotifier {
   static const String _keyRole = "cached_role";
   static const String _keyIsLoggedIn = "cached_IsLoggedIn";
   static const String _keyRememberedUsername = 'remembered_username';
-
+  static String currentUserId = "";
   // In-Memory Global State
   List<Map<String, dynamic>> users = [];
   List<Map<String, dynamic>> students = [];
@@ -46,6 +46,9 @@ class AppDataProvider extends ChangeNotifier {
   Map<String, Map<String, Map<String, dynamic>>> examResultsByExamId = {};
   Map<String, Set<String>> submittedSessions = {};
   Map<String, Set<String>> submittedProgressLogs = {};
+  bool parentLoading = false;
+
+  // Add the getter that ParentDashboard is trying to access
 
   static final months = [
     'Jan',
@@ -84,6 +87,7 @@ class AppDataProvider extends ChangeNotifier {
     _listenToExams();
 
     isLoading = false;
+
     notifyListeners();
   }
 
@@ -103,6 +107,18 @@ class AppDataProvider extends ChangeNotifier {
           .map((doc) => doc.data()..['studentId'] = doc.id)
           .toList();
       _saveToPrefs(_keyStudents, students);
+      // If we already have a cached parent UID, update reports automatically
+      if (currentUserId.isNotEmpty) {
+        final parentChildren = getChildrenForParent(currentUserId);
+        if (parentChildren.isNotEmpty) {
+          final rawId =
+              parentChildren[_selectedChildIndex]['studentId'] ??
+              parentChildren[_selectedChildIndex]['id'];
+          fetchTodayReportForChild(_extractStringId(rawId));
+        }
+      }
+
+      parentLoading = false;
       notifyListeners();
     });
   }
@@ -392,9 +408,7 @@ class AppDataProvider extends ChangeNotifier {
     String dateStr,
   ) {
     final dateLogs = attendanceLogs[dateStr];
-    debugPrint(
-      "Std id: $studentId and selected session $sessionName and logs ${dateLogs}",
-    );
+
     if (dateLogs != null) {
       final sessionLogs = dateLogs[sessionName];
       if (sessionLogs != null) {
@@ -661,7 +675,6 @@ class AppDataProvider extends ChangeNotifier {
   // ==========================================
   // PARENT / CHILD SCREEN HELPERS
   // ==========================================
-
   int _selectedChildIndex = 0;
   Map<String, dynamic> _todayReport = {};
 
@@ -669,10 +682,19 @@ class AppDataProvider extends ChangeNotifier {
   int get selectedChildIndex => _selectedChildIndex;
   Map<String, dynamic> get todayReport => _todayReport;
 
+  /// Helper to safely extract String ID from dynamic values or Maps
+  String _extractStringId(dynamic value) {
+    if (value is Map) {
+      return value['id']?.toString() ?? value['uid']?.toString() ?? '';
+    }
+    return value?.toString() ?? '';
+  }
+
   /// Returns students assigned to the logged-in parent
   List<Map<String, dynamic>> get children {
-    // Note: If you want all students when no parent filter is applied, return 'students' directly.
-    // Here we filter by parent ID if available in SharedPreferences cache.
+    if (currentUserId.isNotEmpty) {
+      return getChildrenForParent(currentUserId);
+    }
     return students;
   }
 
@@ -688,10 +710,11 @@ class AppDataProvider extends ChangeNotifier {
   /// Retrieves students assigned to a specific parent ID
   List<Map<String, dynamic>> getChildrenForParent(String parentUid) {
     if (parentUid.isEmpty) return [];
+
     return students.where((student) {
-      final assignedParentId =
-          student['parentId'] ?? student['assignedParentId'];
-      return assignedParentId == parentUid;
+      dynamic pId = student['parentId'] ?? student['assignedParentId'];
+      String extractedId = _extractStringId(pId);
+      return extractedId == parentUid;
     }).toList();
   }
 
@@ -700,7 +723,9 @@ class AppDataProvider extends ChangeNotifier {
     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     final todayLog = progressLogs.firstWhere(
-      (log) => log['studentId'] == studentId && log['date'] == todayStr,
+      (log) =>
+          _extractStringId(log['studentId']) == studentId &&
+          log['date'] == todayStr,
       orElse: () => {},
     );
 
@@ -710,7 +735,7 @@ class AppDataProvider extends ChangeNotifier {
     if (todayAttendance != null) {
       for (var session in todayAttendance.values) {
         if (session.containsKey(studentId)) {
-          attendanceStatus = session[studentId] ?? "Not Logged";
+          attendanceStatus = session[studentId]?.toString() ?? "Not Logged";
           break;
         }
       }
@@ -725,19 +750,20 @@ class AppDataProvider extends ChangeNotifier {
 
   /// Loads children list for logged-in parent and fetches initial report
   Future<void> loadChildrenAndReports() async {
-    isLoading = true;
+    parentLoading = true;
     notifyListeners();
 
     try {
       final sp = await SharedPreferences.getInstance();
-      final parentId = sp.getString(_keyUid) ?? "";
+      currentUserId = sp.getString(_keyUid) ?? "";
 
-      final parentChildren = getChildrenForParent(parentId);
+      final parentChildren = getChildrenForParent(currentUserId);
 
       if (parentChildren.isNotEmpty) {
         _selectedChildIndex = 0;
-        final firstChildId =
-            parentChildren[0]['studentId'] ?? parentChildren[0]['id'] ?? "";
+        final rawId = parentChildren[0]['studentId'] ?? parentChildren[0]['id'];
+        final firstChildId = _extractStringId(rawId);
+
         fetchTodayReportForChild(firstChildId);
       } else {
         _todayReport.clear();
@@ -745,7 +771,7 @@ class AppDataProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("Error loading children and reports: $e");
     } finally {
-      isLoading = false;
+      parentLoading = false;
       notifyListeners();
     }
   }
@@ -756,10 +782,12 @@ class AppDataProvider extends ChangeNotifier {
     if (index < 0 || index >= list.length) return;
 
     _selectedChildIndex = index;
-    notifyListeners();
 
-    final childId = list[index]['studentId'] ?? list[index]['id'] ?? "";
+    final rawId = list[index]['studentId'] ?? list[index]['id'];
+    final childId = _extractStringId(rawId);
+
     fetchTodayReportForChild(childId);
+    notifyListeners();
   }
 
   /// Updates current daily report state for child

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppData {
@@ -974,6 +975,7 @@ class AppData {
     String role,
     bool loggedIn,
   ) async {
+    AppDataProvider.currentUserId = uid;
     var sp = await SharedPreferences.getInstance();
     await sp.setString(_keyUid, uid);
     await sp.setString(_keyRole, role);

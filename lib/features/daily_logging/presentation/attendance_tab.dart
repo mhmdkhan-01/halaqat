@@ -26,11 +26,10 @@ class _AttendanceTabState extends State<AttendanceTab> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<AppDataProvider>(context, listen: false);
       if (_selectedSessions.isEmpty && provider.availableSessions.isNotEmpty) {
-        setState(() {
-          _selectedSessions.add(
-            provider.availableSessions.first['name'].toString(),
-          );
-        });
+        _selectedSessions.add(
+          provider.availableSessions.first['name'].toString(),
+        );
+        setState(() {});
       }
     });
   }
@@ -121,7 +120,15 @@ class _AttendanceTabState extends State<AttendanceTab> {
   void _submitAttendance(AppDataProvider provider) {
     final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final submittedForToday = provider.submittedSessions[todayKey] ?? {};
-
+    if (_selectedSessions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select a session'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

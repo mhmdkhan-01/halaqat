@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:halaqat/features/auth/presentation/login_screen.dart';
 import 'package:halaqat/features/progress_tracking/data/app_data_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'parent_reports_screen.dart';
 
 class ParentDashboard extends StatefulWidget {
@@ -21,6 +22,17 @@ class _ParentDashboardState extends State<ParentDashboard> {
     });
   }
 
+  Future<void> _handleLogout(BuildContext context) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.clear(); // Clear cached Auth UID & user data
+    if (!context.mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,7 +40,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
       body: SafeArea(
         child: Consumer<AppDataProvider>(
           builder: (context, provider, child) {
-            if (provider.isLoading) {
+            if (provider.parentLoading) {
               return const Center(
                 child: CircularProgressIndicator(color: Color(0xFF0A5C36)),
               );
@@ -41,7 +53,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
-                // 1. Elegant Parent Portal Header
+                // 1. Parent Portal Header
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
@@ -57,7 +69,6 @@ class _ParentDashboardState extends State<ParentDashboard> {
                             letterSpacing: -0.5,
                           ),
                         ),
-                        // Language Switcher
                         GestureDetector(
                           onTap: () {
                             if (context.locale == const Locale('en')) {
@@ -92,8 +103,42 @@ class _ParentDashboardState extends State<ParentDashboard> {
                   ),
                 ),
 
-                // 2. Child Selector List
-                if (children.isNotEmpty)
+                // 2. Empty State View if no children exist
+                if (children.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.child_care_outlined,
+                            size: 64,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            "No students assigned to your account yet.",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () => _handleLogout(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFEF4444),
+                            ),
+                            child: Text('logout'.tr()),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else ...[
+                  // 3. Child Selector List
                   SliverToBoxAdapter(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,7 +164,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount: children.length,
                             itemBuilder: (context, index) {
-                              final child = children[index];
+                              final childItem = children[index];
                               final isSelected =
                                   index == provider.selectedChildIndex;
                               return GestureDetector(
@@ -163,7 +208,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                       ),
                                       const SizedBox(width: 12),
                                       Text(
-                                        child['name'] ?? '',
+                                        childItem['name'] ?? '',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15,
@@ -183,247 +228,254 @@ class _ParentDashboardState extends State<ParentDashboard> {
                     ),
                   ),
 
-                // 3. Today's Progress Card
-                if (selectedChild != null)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'today_summary'.tr(),
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B),
+                  // 4. Today's Progress Card
+                  if (selectedChild != null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'today_summary'.tr(),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E293B),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          selectedChild['name'] ?? '',
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w800,
-                                            color: Color(0xFF0A5C36),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.02),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            selectedChild['name'] ?? '',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w800,
+                                              color: Color(0xFF0A5C36),
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        GestureDetector(
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    ParentReportsScreen(
-                                                      childName:
-                                                          selectedChild['name'],
-                                                      studentId:
-                                                          selectedChild['studentId'],
-                                                    ),
-                                              ),
-                                            );
-                                          },
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                "View Report Card",
-                                                style: TextStyle(
-                                                  color: Color(0xFF0A5C36),
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.bold,
-                                                  decoration:
-                                                      TextDecoration.underline,
+                                          const SizedBox(height: 4),
+                                          GestureDetector(
+                                            onTap: () {
+                                              // Safely extract the student ID string from Map or String
+                                              final rawId =
+                                                  selectedChild['studentId'] ??
+                                                  selectedChild['id'];
+                                              final String cleanStudentId =
+                                                  _safeExtractId(rawId);
+
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      ParentReportsScreen(
+                                                        childName:
+                                                            selectedChild['name']
+                                                                ?.toString() ??
+                                                            '',
+                                                        studentId:
+                                                            cleanStudentId,
+                                                      ),
                                                 ),
-                                              ),
-                                              Icon(
-                                                Icons.keyboard_arrow_right,
-                                                size: 16,
-                                                color: Color(0xFF0A5C36),
-                                              ),
-                                            ],
+                                              );
+                                            },
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  "View Report Card",
+                                                  style: TextStyle(
+                                                    color: Color(0xFF0A5C36),
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.bold,
+                                                    decoration: TextDecoration
+                                                        .underline,
+                                                  ),
+                                                ),
+                                                Icon(
+                                                  Icons.keyboard_arrow_right,
+                                                  size: 16,
+                                                  color: Color(0xFF0A5C36),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (todayReport['attendance'] == null)
-                                      Text(
-                                        'Pending'.tr(),
-                                        style: const TextStyle(
-                                          color: Color(0xFF64748B),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      )
-                                    else
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(
-                                            0xFF10B981,
-                                          ).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          todayReport['attendance']
-                                              .toString()
-                                              .toLowerCase()
-                                              .tr(),
+                                        ],
+                                      ),
+                                      if (todayReport['attendance'] == null)
+                                        Text(
+                                          'Pending'.tr(),
                                           style: const TextStyle(
-                                            color: Color(0xFF10B981),
+                                            color: Color(0xFF64748B),
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12,
                                           ),
+                                        )
+                                      else
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(
+                                              0xFF10B981,
+                                            ).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            todayReport['attendance']
+                                                .toString()
+                                                .toLowerCase()
+                                                .tr(),
+                                            style: const TextStyle(
+                                              color: Color(0xFF10B981),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                  ],
-                                ),
-                                const Divider(
-                                  height: 30,
-                                  color: Color(0xFFF1F5F9),
-                                ),
-                                if (todayReport['attendance'] != null) ...[
-                                  _buildProgressRow(
-                                    'sabaq'.tr(),
-                                    todayReport['sabaq'] ?? '',
-                                    todayReport['sabaqgrade'] ?? '',
-                                    Icons.chrome_reader_mode_outlined,
+                                    ],
                                   ),
-                                  const SizedBox(height: 16),
-                                  _buildProgressRow(
-                                    'sabqi'.tr(),
-                                    todayReport['sabqi'] ?? '',
-                                    todayReport['sabqigrade'] ?? '',
-                                    Icons.history_edu_outlined,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildProgressRow(
-                                    'manzil'.tr(),
-                                    todayReport['manzil'] ?? '',
-                                    todayReport['manzilgrade'] ?? '',
-                                    Icons.star_border_rounded,
-                                  ),
-                                ] else ...[
-                                  const Center(
-                                    child: Text(
-                                      'Progress Data is not logged yet.',
-                                      style: TextStyle(
-                                        color: Color(0xFF64748B),
-                                        fontSize: 13,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                if (todayReport['teacher_note'] != null) ...[
                                   const Divider(
                                     height: 30,
                                     color: Color(0xFFF1F5F9),
                                   ),
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF6F8F6),
-                                      borderRadius: BorderRadius.circular(12),
+                                  if (todayReport['attendance'] != null) ...[
+                                    _buildProgressRow(
+                                      'sabaq'.tr(),
+                                      fixedSabaq(todayReport['sabaq'] ?? {}),
+                                      todayReport['sabaqRemark']?.toString() ??
+                                          '',
+                                      Icons.chrome_reader_mode_outlined,
                                     ),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Icon(
-                                          Icons.rate_review_outlined,
-                                          color: Color(0xFF0A5C36),
-                                          size: 20,
+                                    const SizedBox(height: 16),
+                                    _buildProgressRow(
+                                      'sabqi'.tr(),
+                                      todayReport['sabqi']?.toString() ?? '',
+                                      todayReport['sabqiRemark']?.toString() ??
+                                          '',
+                                      Icons.history_edu_outlined,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _buildProgressRow(
+                                      'manzil'.tr(),
+                                      todayReport['manzil']?.toString() ?? '',
+                                      todayReport['manzilRemark']?.toString() ??
+                                          '',
+                                      Icons.star_border_rounded,
+                                    ),
+                                  ] else ...[
+                                    const Center(
+                                      child: Text(
+                                        'Progress Data is not logged yet.',
+                                        style: TextStyle(
+                                          color: Color(0xFF64748B),
+                                          fontSize: 13,
+                                          fontStyle: FontStyle.italic,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            todayReport['teacher_note'],
-                                            style: const TextStyle(
-                                              color: Color(0xFF475569),
-                                              fontSize: 13,
-                                              fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                  if (todayReport['teacher_note'] != null) ...[
+                                    const Divider(
+                                      height: 30,
+                                      color: Color(0xFFF1F5F9),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF6F8F6),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Icon(
+                                            Icons.rate_review_outlined,
+                                            color: Color(0xFF0A5C36),
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              todayReport['teacher_note'],
+                                              style: const TextStyle(
+                                                color: Color(0xFF475569),
+                                                fontSize: 13,
+                                                fontStyle: FontStyle.italic,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ],
-                              ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // 5. Logout Button
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 30.0,
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () => _handleLogout(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF4444),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'logout'.tr(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                // 4. Logout Button
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20.0,
-                      vertical: 30.0,
-                    ),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEF4444),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'logout'.tr(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ],
             );
           },
@@ -493,5 +545,22 @@ class _ParentDashboardState extends State<ParentDashboard> {
         ),
       ],
     );
+  }
+
+  String _safeExtractId(dynamic rawId) {
+    if (rawId == null) return '';
+    if (rawId is String) return rawId;
+    if (rawId is Map) {
+      return (rawId['id'] ?? rawId['studentId'] ?? rawId['_id'] ?? '')
+          .toString();
+    }
+    return rawId.toString();
+  }
+
+  String fixedSabaq(Map<String, dynamic> sabaq) {
+    if (sabaq.isEmpty) {
+      return "";
+    }
+    return "surah: ${sabaq['surah']}, para: ${sabaq['para']}, lines: ${sabaq['lines']}";
   }
 }

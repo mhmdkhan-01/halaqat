@@ -210,7 +210,7 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                                   const SizedBox(width: 6),
                                 ],
                                 Text(
-                                  sessionName.tr(),
+                                  sessionName,
                                   style: TextStyle(
                                     color: isSelected
                                         ? Colors.white
@@ -475,6 +475,15 @@ class _TeacherDashboardTabState extends State<TeacherDashboardTab> {
                     ],
                   ),
                   onTap: () async {
+                    if (_selectedSession == null || _selectedSession!.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please select a session first.'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
                     if (currentSessionStatus == "Pending") {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
