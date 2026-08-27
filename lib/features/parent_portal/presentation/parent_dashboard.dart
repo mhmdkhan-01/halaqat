@@ -367,7 +367,11 @@ class _ParentDashboardState extends State<ParentDashboard> {
                                     height: 30,
                                     color: Color(0xFFF1F5F9),
                                   ),
-                                  if (todayReport['attendance'] != null) ...[
+                                  if (todayReport['attendance'] == null ||
+                                      (!todayReport.containsKey('sabaq'))) ...[
+                                    Center(child: Text("No data logged")),
+                                  ] else if (todayReport['attendance'] !=
+                                      null) ...[
                                     _buildProgressRow(
                                       'sabaq'.tr(),
                                       fixedSabaq(todayReport['sabaq'] ?? {}),
