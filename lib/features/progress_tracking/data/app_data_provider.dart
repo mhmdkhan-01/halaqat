@@ -228,55 +228,6 @@ class AppDataProvider extends ChangeNotifier {
   // FIRESTORE WRITE OPERATIONS
   // ==========================================
 
-  // Future<void> addUser({
-  //   required String name,
-  //   required String email,
-  //   required String role,
-  //   required String phoneNumber,
-  //   required String password,
-  // }) async {
-  //   FirebaseApp? tempApp;
-  //   try {
-  //     // 1. Initialize a secondary Firebase instance so Admin stays logged in
-  //     tempApp = await Firebase.initializeApp(
-  //       name: 'TempUserAuth_${DateTime.now().millisecondsSinceEpoch}',
-  //       options: Firebase.app().options,
-  //     );
-
-  //     // 2. Register user credentials in Firebase Auth
-  //     UserCredential userCredential =
-  //         await FirebaseAuth.instanceFor(
-  //           app: tempApp,
-  //         ).createUserWithEmailAndPassword(
-  //           email: email.trim(),
-  //           password: password.trim(),
-  //         );
-
-  //     final String? uid = userCredential.user?.uid;
-
-  //     if (uid != null) {
-  //       // 3. Store user details and role in Firestore using the generated Auth UID
-  //       await FirebaseFirestore.instance.collection('users').doc(uid).set({
-  //         'uid': uid,
-  //         'name': name.trim(),
-  //         'email': email.trim(),
-  //         'role': role.toLowerCase().trim(),
-  //         'phoneNumber': phoneNumber.trim(),
-  //         'createdAt': FieldValue.serverTimestamp(),
-  //       });
-  //     }
-  //   } on FirebaseAuthException catch (e) {
-  //     print("Firebase Auth Error: ${e.code} - ${e.message}");
-  //     rethrow;
-  //   } catch (e) {
-  //     print("Error creating user: $e");
-  //     rethrow;
-  //   } finally {
-  //     // 4. Clean up the secondary Firebase app instance
-  //     await tempApp?.delete();
-  //   }
-  // }
-
   Future<void> addStudent(String name) async {
     final docRef = _db.collection('students').doc();
     await docRef.set({
