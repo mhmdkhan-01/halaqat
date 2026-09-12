@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppDataProvider extends ChangeNotifier {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Real-time Stream Subscriptions
+  // Real-time Stream SubscriptionsF
   StreamSubscription? _usersSub;
   StreamSubscription? _studentsSub;
   StreamSubscription? _sessionsSub;
